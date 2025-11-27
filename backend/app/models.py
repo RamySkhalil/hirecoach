@@ -233,33 +233,36 @@ class User(Base):
 
 class Subscription(Base):
     """
-    User subscription model.
+    User subscription model with dynamic plan reference.
+    Links users to pricing plans instead of hard-coded tiers.
     """
     __tablename__ = "subscriptions"
     
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    plan_id = Column(Integer, ForeignKey("pricing_plans.id"), nullable=False, index=True)
     
     # Subscription details
-    tier = Column(SQLEnum(SubscriptionTier), nullable=False, default=SubscriptionTier.FREE)
+    billing_period = Column(String(20), nullable=False)  # 'monthly' or 'yearly'
     status = Column(SQLEnum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE)
     
-    # Billing
-    stripe_customer_id = Column(String(255), nullable=True)
-    stripe_subscription_id = Column(String(255), nullable=True)
-    price_id = Column(String(255), nullable=True)
+    # Payment provider integration
+    stripe_customer_id = Column(String(255), nullable=True, index=True)
+    stripe_subscription_id = Column(String(255), nullable=True, index=True)
+    stripe_price_id = Column(String(255), nullable=True)
     
-    # Limits
-    interviews_limit = Column(Integer, default=5)  # Per month
-    cv_analyses_limit = Column(Integer, default=3)  # Per month
+    # Billing cycle dates
+    trial_ends_at = Column(DateTime, nullable=True)
+    current_period_start = Column(DateTime, nullable=False)
+    current_period_end = Column(DateTime, nullable=False)
+    canceled_at = Column(DateTime, nullable=True)
+    
+    # Legacy fields (deprecated - use UserFeatureUsage instead)
+    # Kept for backward compatibility during migration
+    interviews_limit = Column(Integer, nullable=True)
+    cv_analyses_limit = Column(Integer, nullable=True)
     interviews_used = Column(Integer, default=0)
     cv_analyses_used = Column(Integer, default=0)
-    
-    # Dates
-    trial_ends_at = Column(DateTime, nullable=True)
-    current_period_start = Column(DateTime, nullable=True)
-    current_period_end = Column(DateTime, nullable=True)
-    canceled_at = Column(DateTime, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -267,6 +270,7 @@ class Subscription(Base):
     
     # Relationships
     user = relationship("User", back_populates="subscription")
+    plan = relationship("PricingPlan", back_populates="subscriptions")
 
 
 class JobStatus(str, enum.Enum):
@@ -498,4 +502,163 @@ class UserMessageEmbedding(Base):
     
     def __repr__(self):
         return f"<UserMessageEmbedding(id={self.id}, user_id={self.user_id}, role={self.message_role})>"
+
+
+# ========================================
+# PRICING & USAGE TRACKING MODELS
+# ========================================
+
+class PricingPlan(Base):
+    """
+    Defines high-level subscription plans (Free, Basic, Pro, etc.).
+    Dynamic pricing system - plans configured in database, not hard-coded.
+    """
+    __tablename__ = "pricing_plans"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(50), unique=True, nullable=False, index=True)  # 'free', 'basic', 'pro'
+    name = Column(String(100), nullable=False)  # Display name: 'Free', 'Pro'
+    description = Column(Text, nullable=True)  # Marketing description
+    is_active = Column(Boolean, default=True, nullable=False)  # Can be disabled
+    sort_order = Column(Integer, default=0, nullable=False)  # Display order
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    prices = relationship("PlanPrice", back_populates="plan", cascade="all, delete-orphan")
+    features = relationship("PlanFeature", back_populates="plan", cascade="all, delete-orphan")
+    subscriptions = relationship("Subscription", back_populates="plan")
+    
+    def __repr__(self):
+        return f"<PricingPlan(code={self.code}, name={self.name})>"
+
+
+class PlanPrice(Base):
+    """
+    Stores pricing for each plan by billing period (monthly/yearly).
+    Multiple prices per plan for different billing cycles.
+    """
+    __tablename__ = "plan_prices"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    plan_id = Column(Integer, ForeignKey("pricing_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    billing_period = Column(String(20), nullable=False)  # 'monthly' or 'yearly'
+    price_cents = Column(Integer, nullable=False)  # Price in cents (e.g., 9900 = $99.00)
+    currency = Column(String(10), nullable=False, default="USD")
+    trial_days = Column(Integer, default=0, nullable=False)  # Free trial period
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    plan = relationship("PricingPlan", back_populates="prices")
+    
+    def __repr__(self):
+        return f"<PlanPrice(plan_id={self.plan_id}, period={self.billing_period}, price={self.price_cents})>"
+
+
+class PlanFeature(Base):
+    """
+    Defines per-feature limits for each pricing plan.
+    Dynamic feature configuration - add new features without code changes.
+    """
+    __tablename__ = "plan_features"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    plan_id = Column(Integer, ForeignKey("pricing_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    feature_code = Column(String(50), nullable=False, index=True)  # 'cv_generate', 'mock_interview', etc.
+    monthly_quota = Column(Integer, nullable=True)  # NULL = unlimited, 0 = disabled, >0 = limit
+    hard_cap = Column(Boolean, default=True, nullable=False)  # TRUE = block after limit, FALSE = allow with warning
+    rollover = Column(Boolean, default=False, nullable=False)  # For future: carry over unused quota
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    plan = relationship("PricingPlan", back_populates="features")
+    
+    def __repr__(self):
+        return f"<PlanFeature(plan_id={self.plan_id}, feature={self.feature_code}, quota={self.monthly_quota})>"
+
+
+class UserFeatureUsage(Base):
+    """
+    Tracks per-user feature usage within a billing period.
+    Resets at the start of each billing cycle.
+    """
+    __tablename__ = "user_feature_usage"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255), nullable=False, index=True)  # Clerk user ID
+    plan_id = Column(Integer, ForeignKey("pricing_plans.id"), nullable=False, index=True)
+    feature_code = Column(String(50), nullable=False, index=True)
+    
+    # Billing period
+    period_start = Column(DateTime, nullable=False, index=True)
+    period_end = Column(DateTime, nullable=False, index=True)
+    
+    # Usage tracking
+    used_count = Column(Integer, default=0, nullable=False)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    def __repr__(self):
+        return f"<UserFeatureUsage(user_id={self.user_id}, feature={self.feature_code}, used={self.used_count})>"
+
+
+class ModelPricing(Base):
+    """
+    Configuration table for LLM model pricing.
+    Used to calculate cost from token usage.
+    """
+    __tablename__ = "model_pricing"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    model_name = Column(String(100), unique=True, nullable=False, index=True)  # 'gpt-4o', 'gpt-4o-mini'
+    input_cost_per_1k = Column(Float, nullable=False)  # USD per 1000 input tokens
+    output_cost_per_1k = Column(Float, nullable=False)  # USD per 1000 output tokens
+    currency = Column(String(10), nullable=False, default="USD")
+    effective_from = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    def __repr__(self):
+        return f"<ModelPricing(model={self.model_name}, input=${self.input_cost_per_1k}/1k, output=${self.output_cost_per_1k}/1k)>"
+
+
+class TokenUsageLog(Base):
+    """
+    Logs every LLM API call's token usage and cost.
+    Used for profit/loss analysis and usage insights.
+    """
+    __tablename__ = "token_usage_log"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255), nullable=True, index=True)  # Clerk user ID (nullable for system calls)
+    plan_id = Column(Integer, ForeignKey("pricing_plans.id"), nullable=True, index=True)
+    feature_code = Column(String(50), nullable=True, index=True)  # 'career_chat', 'cv_generate', etc.
+    
+    # Token usage
+    model_name = Column(String(100), nullable=False, index=True)
+    input_tokens = Column(Integer, nullable=False)
+    output_tokens = Column(Integer, nullable=False)
+    cost_usd = Column(Float, nullable=False)  # Calculated cost in USD
+    
+    # Metadata
+    request_id = Column(String(100), nullable=True)  # For tracing
+    metadata_json = Column(JSON, nullable=True)  # Additional context
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    def __repr__(self):
+        return f"<TokenUsageLog(user_id={self.user_id}, model={self.model_name}, cost=${self.cost_usd})>"
 
