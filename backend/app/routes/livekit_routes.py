@@ -10,6 +10,7 @@ from app.config import settings
 # Try to import LiveKit
 try:
     from livekit import api
+    from livekit.api import RoomConfiguration, RoomAgentDispatch
     LIVEKIT_AVAILABLE = True
 except ImportError:
     LIVEKIT_AVAILABLE = False
@@ -51,6 +52,8 @@ async def create_token(request: TokenRequest):
         )
     
     try:
+        room_name = f"interview-{request.session_id}"
+        
         # Create access token
         token = api.AccessToken(
             settings.livekit_api_key,
@@ -64,11 +67,29 @@ async def create_token(request: TokenRequest):
         # Grant permissions
         token.with_grants(api.VideoGrants(
             room_join=True,
-            room=f"interview-{request.session_id}",
+            room=room_name,
             can_publish=True,
             can_subscribe=True,
             can_publish_data=True,
         ))
+        
+        # 🔥 Configure agent dispatch - automatically dispatch agent when participant joins
+        # Empty agent_name matches any registered agent (including unnamed agents)
+        token.with_room_config(
+            RoomConfiguration(
+                agents=[
+                    RoomAgentDispatch(
+                        agent_name="",
+                        metadata=(
+                            f'{{'
+                            f'"session_id": "{request.session_id}", '
+                            f'"participant": "{request.participant_name}"'
+                            f'}}'
+                        )
+                    )
+                ]
+            )
+        )
         
         # Set token expiration (2 hours - enough for long interviews)
         token.with_ttl(timedelta(seconds=7200))
@@ -76,11 +97,13 @@ async def create_token(request: TokenRequest):
         jwt_token = token.to_jwt()
         
         print(f"✅ Generated LiveKit token for session: {request.session_id}")
+        print(f"   Room: {room_name}")
+        print(f"   Agent dispatch: Enabled (automatic)")
         
         return {
             "token": jwt_token,
             "url": settings.livekit_url,
-            "room_name": f"interview-{request.session_id}"
+            "room_name": room_name
         }
         
     except Exception as e:

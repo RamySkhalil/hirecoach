@@ -42,10 +42,10 @@ class Settings(BaseSettings):
     stt_provider: str = "whisper"  # "deepgram" or "whisper"
 
     # LiveKit Settings
-    livekit_url: Optional[str] = None
+    # Backend uses these to generate tokens and connect agent
+    livekit_url: Optional[str] = None  # wss://your-project.livekit.cloud
     livekit_api_key: Optional[str] = None
     livekit_api_secret: Optional[str] = None
-    next_public_livekit_url: Optional[str] = None  # For frontend (can be same as livekit_url)
 
     # App settings
     app_name: str = "Interviewly"

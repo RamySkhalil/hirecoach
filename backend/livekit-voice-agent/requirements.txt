@@ -1,0 +1,10 @@
+# LiveKit Agents Framework
+livekit-agents>=0.8.0
+
+# OpenAI plugin for Realtime API
+livekit-plugins-openai>=0.6.0
+
+# Core dependencies (usually installed automatically)
+livekit>=0.11.0
+python-dotenv>=1.0.0
+
