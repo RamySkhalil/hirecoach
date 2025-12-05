@@ -74,19 +74,22 @@ class InterviewCoachAgent(Agent):
         # Build context-aware instructions
         role_context = ""
         if job_title:
-            role_context = f"\n\nInterview Context:\n- Position: {job_title}\n- Level: {seniority or 'mid'}-level\n- Questions to ask: {num_questions}"
+            role_context = f"\n\nInterview Context:\n- Position: {job_title}\n- Level: {seniority or 'mid'}-level\n- Total questions to ask: {num_questions}"
         
         instructions = f"""You are an expert AI Interview Coach conducting a professional mock interview.
 {role_context}
 
+IMPORTANT: You must ask EXACTLY {num_questions} questions during this interview, no more, no less.
+
 Your role:
 - Greet the candidate warmly and professionally
-- Ask relevant interview questions tailored to the {job_title or 'target'} role
+- Ask exactly {num_questions} relevant interview questions tailored to the {job_title or 'target'} role
 - Listen actively to their answers
-- Provide constructive feedback on their responses
+- Provide brief constructive feedback on their responses (keep feedback short and conversational)
 - Maintain a supportive yet professional tone
-- Ask follow-up questions when appropriate
+- Ask follow-up questions when appropriate (but count this as part of your {num_questions} questions)
 - Help candidates improve their interview skills
+- After the {num_questions}th question is answered, thank them and wrap up the interview
 
 Guidelines:
 - Be encouraging and supportive
@@ -96,16 +99,43 @@ Guidelines:
 - Gently point out areas for improvement
 - Keep the interview professional and focused
 - Focus questions on skills relevant to {job_title or 'the role'} at the {seniority or 'mid'} level
+- Keep track of how many questions you've asked
+- When you reach {num_questions} questions, conclude with: "Thank you for completing this interview. We've covered all {num_questions} questions. You'll receive a detailed report shortly. Have a great day!"
 
-Remember: Your goal is to help candidates succeed in their real interviews."""
+Remember: Your goal is to help candidates succeed in their real interviews, and you must stick to exactly {num_questions} questions."""
 
         super().__init__(instructions=instructions)
         
         self.job_title = job_title
         self.seniority = seniority
         self.num_questions = num_questions
+        self.questions_asked = 0
+        self.conversation_transcript = []
 
 server = AgentServer()
+
+async def save_interview_transcript(session_id: str, transcript: list, questions_asked: int) -> None:
+    """
+    Save the interview transcript to the backend.
+    
+    This allows the backend to generate a detailed report based on the conversation.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{BACKEND_URL}/interview/voice-session/{session_id}/complete",
+                json={
+                    "transcript": transcript,
+                    "questions_asked": questions_asked,
+                }
+            )
+            if response.status_code == 200:
+                print(f"✅ Saved transcript for session {session_id}")
+            else:
+                print(f"⚠️ Failed to save transcript: HTTP {response.status_code}")
+    except Exception as e:
+        print(f"⚠️ Error saving transcript: {e}")
+
 
 @server.rtc_session()
 async def interview_agent_handler(ctx: agents.JobContext):
@@ -149,6 +179,55 @@ async def interview_agent_handler(ctx: agents.JobContext):
         num_questions=num_questions
     )
 
+    # Track conversation for transcript
+    transcript = []
+    
+    # Track if interview is complete
+    interview_complete = False
+    
+    # Set up event handlers to capture conversation
+    @session.on("user_speech_committed")
+    def on_user_speech(speech):
+        """Capture user's speech"""
+        transcript.append({
+            "role": "user",
+            "content": speech.text,
+            "timestamp": speech.timestamp if hasattr(speech, 'timestamp') else None
+        })
+        print(f"👤 User said: {speech.text[:100]}...")
+    
+    @session.on("agent_speech_committed")
+    async def on_agent_speech(speech):
+        """Capture agent's speech"""
+        nonlocal interview_complete
+        
+        transcript.append({
+            "role": "assistant",
+            "content": speech.text,
+            "timestamp": speech.timestamp if hasattr(speech, 'timestamp') else None
+        })
+        print(f"🤖 Agent said: {speech.text[:100]}...")
+        
+        # Track questions asked (rough estimate based on agent turns)
+        agent.questions_asked = len([t for t in transcript if t["role"] == "assistant"]) // 2
+        
+        # Check if interview is complete (agent said closing message)
+        closing_keywords = ["thank you for completing", "you'll receive a detailed report", "have a great day", "we've covered all"]
+        if any(keyword in speech.text.lower() for keyword in closing_keywords):
+            interview_complete = True
+            print(f"✅ Interview complete! Saving transcript and ending session...")
+            
+            # Save transcript
+            await save_interview_transcript(session_id, transcript, agent.questions_asked)
+            
+            # Wait a moment for the message to be delivered
+            import asyncio
+            await asyncio.sleep(3)
+            
+            # Disconnect the room to end the interview
+            await ctx.room.disconnect()
+            print(f"🔚 Room disconnected. Interview session {session_id} ended.")
+    
     # Start the agent session
     await session.start(
         room=ctx.room,
@@ -174,9 +253,28 @@ async def interview_agent_handler(ctx: agents.JobContext):
         and I'm here to help you practice and improve your interview skills. 
         Before we begin, could you briefly tell me about the role you're preparing for?'"""
     
-    await session.generate_reply(instructions=greeting_instructions)
+    greeting = await session.generate_reply(instructions=greeting_instructions)
+    transcript.append({
+        "role": "assistant",
+        "content": greeting if isinstance(greeting, str) else "Welcome to your interview!",
+        "timestamp": None
+    })
     
     print(f"✅ Agent greeted candidate in room: {room_name}")
+    
+    # Monitor room for disconnection and save transcript when interview ends
+    @ctx.room.on("participant_disconnected")
+    async def on_participant_disconnected(participant):
+        """Called when the candidate leaves the room"""
+        if participant.identity == "agent" or participant.kind != "standard":
+            return  # Don't trigger on agent disconnect
+            
+        print(f"📝 Participant {participant.identity} disconnected. Saving transcript...")
+        
+        # Save the conversation transcript to backend
+        await save_interview_transcript(session_id, transcript, agent.questions_asked)
+        
+        print(f"✅ Interview session {session_id} completed")
 
 
 if __name__ == "__main__":

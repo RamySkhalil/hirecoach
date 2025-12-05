@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from datetime import datetime
+from pydantic import BaseModel
 
 from app.db import get_db
 from app.models import InterviewSession, InterviewQuestion, InterviewAnswer
@@ -279,6 +280,83 @@ def finish_interview(
         session_id=session.id,
         summary=InterviewSummary(**summary_data)
     )
+
+
+class VoiceInterviewCompleteRequest(BaseModel):
+    """Request model for completing a voice interview."""
+    transcript: list
+    questions_asked: int
+
+
+@router.post("/voice-session/{session_id}/complete")
+def complete_voice_interview(
+    session_id: str,
+    request: VoiceInterviewCompleteRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Complete a voice interview session and generate a detailed report.
+    
+    This endpoint is called by the LiveKit voice agent when the interview ends.
+    It saves the transcript and generates a comprehensive summary report.
+    """
+    try:
+        # Validate session exists
+        session = db.query(InterviewSession).filter(
+            InterviewSession.id == session_id
+        ).first()
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Interview session not found")
+        
+        # If already completed, return existing summary
+        if session.status == "completed" and session.summary_json:
+            return {
+                "message": "Interview already completed",
+                "session_id": session_id,
+                "summary": session.summary_json
+            }
+        
+        # Generate summary from voice transcript using LLM
+        # Extract questions and answers from transcript
+        conversation_text = "\n".join([
+            f"{'Agent' if item.get('role') == 'assistant' else 'Candidate'}: {item.get('content', '')}"
+            for item in request.transcript
+        ])
+        
+        # Use LLM to analyze the conversation and generate report
+        from app.services.llm_service import LLMService
+        
+        summary_data = LLMService.summarize_voice_interview(
+            job_title=session.job_title,
+            seniority=session.seniority,
+            conversation_transcript=conversation_text,
+            questions_asked=request.questions_asked,
+            total_questions=session.num_questions
+        )
+        
+        # Update session with summary and mark as completed
+        session.status = "completed"
+        session.overall_score = summary_data.get("overall_score", 75)
+        session.summary_json = summary_data
+        session.completed_at = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(session)
+        
+        return {
+            "message": "Interview completed successfully",
+            "session_id": session_id,
+            "summary": summary_data
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error completing voice interview: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/session/{session_id}")

@@ -524,3 +524,90 @@ Be specific, constructive, and encouraging."""
             "action_plan": action_plan,
             "suggested_roles": suggested_roles
         }
+    
+    @staticmethod
+    def summarize_voice_interview(
+        job_title: str,
+        seniority: str,
+        conversation_transcript: str,
+        questions_asked: int,
+        total_questions: int
+    ) -> Dict[str, Any]:
+        """
+        Generate a comprehensive summary of a voice/conversational interview session.
+        
+        This analyzes the full conversation transcript from a LiveKit voice interview.
+        """
+        prompt = f"""You are an expert career coach reviewing a voice mock interview.
+
+Job: {seniority} {job_title}
+Questions Asked: {questions_asked}/{total_questions}
+
+Full Interview Conversation:
+{conversation_transcript}
+
+Based on this interview conversation, provide a comprehensive analysis with:
+
+1. OVERALL SCORE (0-100): Rate the candidate's overall interview performance
+2. STRENGTHS (2-4 items): Specific things the candidate did well
+3. WEAKNESSES (2-4 items): Areas that need improvement
+4. ACTION PLAN (3-5 items): Concrete, actionable steps to improve
+5. SUGGESTED ROLES (2-4 items): Job titles/levels that match their performance
+
+Consider:
+- Quality and depth of answers
+- Communication skills (clarity, confidence, articulation)
+- Technical knowledge (if applicable)
+- Behavioral examples and storytelling
+- Overall professionalism
+- Answer relevance to questions
+
+Return a JSON object with this exact structure:
+{{
+  "overall_score": 78,
+  "strengths": ["strength 1", "strength 2", ...],
+  "weaknesses": ["weakness 1", "weakness 2", ...],
+  "action_plan": ["action 1", "action 2", ...],
+  "suggested_roles": ["role 1", "role 2", ...]
+}}
+
+Be specific, constructive, and encouraging. Focus on actionable feedback."""
+
+        messages = [
+            {"role": "system", "content": "You are an expert career coach. Always respond with valid JSON. Be honest but supportive and constructive."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        response = LLMService._call_llm(messages, response_format="json")
+        
+        if response:
+            try:
+                summary = json.loads(response)
+                if all(key in summary for key in ["overall_score", "strengths", "weaknesses", "action_plan", "suggested_roles"]):
+                    return summary
+            except json.JSONDecodeError:
+                print("Failed to parse LLM summary as JSON")
+        
+        # Fall back to a basic summary
+        return {
+            "overall_score": 75,
+            "strengths": [
+                "Completed the voice interview successfully",
+                "Engaged in natural conversation with the AI interviewer",
+                f"Answered {questions_asked} questions during the session"
+            ],
+            "weaknesses": [
+                "Voice interview analysis requires AI configuration",
+                "Unable to provide detailed performance metrics without AI analysis"
+            ],
+            "action_plan": [
+                "Review your interview recording if available",
+                "Practice speaking clearly and confidently",
+                f"Continue preparing for {job_title} interviews",
+                "Focus on providing specific examples in your answers"
+            ],
+            "suggested_roles": [
+                f"{seniority.title()} {job_title}",
+                f"{job_title} positions at various companies"
+            ]
+        }
