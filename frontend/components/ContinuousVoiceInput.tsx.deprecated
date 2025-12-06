@@ -1,0 +1,364 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Mic, MicOff, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+
+interface ContinuousVoiceInputProps {
+  onTranscript: (text: string) => void;
+  isActive: boolean;
+  disabled?: boolean;
+}
+
+/**
+ * Modern continuous voice recognition using Web Speech API.
+ * No button clicking required - just speaks and auto-transcribes.
+ * Falls back to manual recording if Web Speech API not available.
+ */
+export default function ContinuousVoiceInput({
+  onTranscript,
+  isActive,
+  disabled = false
+}: ContinuousVoiceInputProps) {
+  const [isListening, setIsListening] = useState(false);
+  const [interimText, setInterimText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSupported, setIsSupported] = useState(true);
+  const [audioDetected, setAudioDetected] = useState(false);
+  const [speechDetected, setSpeechDetected] = useState(false);
+  const [noSpeechCount, setNoSpeechCount] = useState(0);
+  
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Check if Web Speech API is available (Chrome, Edge, Safari)
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      setIsSupported(false);
+      setError("Voice recognition not supported in this browser. Use Chrome, Edge, or Safari.");
+      return;
+    }
+
+    // Initialize speech recognition
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true; // Keep listening
+    recognition.interimResults = true; // Show results as you speak
+    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
+    
+    // Experimental: Adjust sensitivity (Chrome only)
+    if ('webkitSpeechRecognition' in window) {
+      (recognition as any).serviceURI = undefined; // Use default
+    }
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setError(null);
+      console.log('[Voice] Started listening...');
+    };
+
+    recognition.onaudiostart = () => {
+      console.log('[Voice] 🎤 Audio input detected! Browser is receiving sound.');
+      setAudioDetected(true);
+    };
+
+    recognition.onaudioend = () => {
+      console.log('[Voice] 🔇 Audio input stopped.');
+      setAudioDetected(false);
+    };
+
+    recognition.onspeechstart = () => {
+      console.log('[Voice] 🗣️ Speech detected! Processing...');
+      setSpeechDetected(true);
+    };
+
+    recognition.onspeechend = () => {
+      console.log('[Voice] Speech ended, waiting for results...');
+      setSpeechDetected(false);
+    };
+
+    recognition.onsoundstart = () => {
+      console.log('[Voice] 🔊 Sound detected from microphone.');
+    };
+
+    recognition.onsoundend = () => {
+      console.log('[Voice] Sound ended.');
+    };
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      console.log('[Voice] Got result event, results length:', event.results.length);
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        const confidence = event.results[i][0].confidence;
+        console.log('[Voice] Result:', transcript, 'isFinal:', event.results[i].isFinal, 'confidence:', confidence);
+        
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Show interim results as you speak
+      if (interimTranscript) {
+        console.log('[Voice] Interim text:', interimTranscript);
+        setInterimText(interimTranscript);
+      }
+
+      // When a phrase is complete, send it
+      if (finalTranscript) {
+        console.log('[Voice] Final transcript:', finalTranscript);
+        onTranscript(finalTranscript.trim());
+        setInterimText('');
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.log('[Voice] Error event:', event.error, 'at', new Date().toLocaleTimeString());
+      
+      // Ignore harmless errors but count them
+      if (event.error === 'no-speech') {
+        console.log('[Voice] ⚠️ No speech detected - audio too quiet or unclear?');
+        setNoSpeechCount(prev => prev + 1);
+        return;
+      }
+      
+      if (event.error === 'aborted') {
+        console.log('[Voice] Harmless error ignored: aborted');
+        return;
+      }
+      
+      console.error('[Voice] Error:', event.error);
+      
+      if (event.error === 'not-allowed') {
+        setError('Microphone access denied. Please allow microphone permission in browser settings.');
+        setIsListening(false);
+      } else if (event.error === 'audio-capture') {
+        setError('Microphone is in use by another app. Please close other apps using your microphone (Discord, Teams, etc.)');
+        setIsListening(false);
+      } else if (event.error === 'network') {
+        setError('Network error. Check your internet connection. Speech recognition requires internet.');
+        setIsListening(false);
+      } else {
+        // Don't show error for other transient issues
+        console.log('[Voice] Transient error:', event.error);
+      }
+    };
+
+    recognition.onend = () => {
+      console.log('[Voice] Stopped listening');
+      setIsListening(false);
+      setInterimText('');
+      
+      // Auto-restart if still active (with longer delay to prevent aborted errors)
+      if (isActive && !disabled) {
+        setTimeout(() => {
+          try {
+            if (isActive && !disabled) {
+              recognition.start();
+            }
+          } catch (err: any) {
+            // Ignore "already started" errors
+            if (!err.message?.includes('already started')) {
+              console.log('[Voice] Could not restart:', err);
+            }
+          }
+        }, 300);
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (err) {
+          // Ignore
+        }
+      }
+    };
+  }, []);
+
+  // Start/stop based on isActive prop
+  useEffect(() => {
+    if (!isSupported || !recognitionRef.current || disabled) return;
+
+    if (isActive && !isListening) {
+      // Start recognition
+      const startRecognition = () => {
+        try {
+          recognitionRef.current.start();
+        } catch (err: any) {
+          if (err.message?.includes('already started')) {
+            // Already running - that's fine
+            setIsListening(true);
+          } else {
+            console.error('[Voice] Start error:', err);
+            setError('Failed to start voice recognition');
+          }
+        }
+      };
+      
+      // Small delay to avoid rapid start/stop
+      const timer = setTimeout(startRecognition, 100);
+      return () => clearTimeout(timer);
+      
+    } else if (!isActive && isListening) {
+      // Stop recognition
+      try {
+        recognitionRef.current.stop();
+      } catch (err) {
+        // Ignore stop errors
+        console.log('[Voice] Stop error (ignored):', err);
+      }
+    }
+  }, [isActive, isListening, isSupported, disabled]);
+
+  if (!isSupported) {
+    return (
+      <div className="text-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p className="text-sm text-yellow-800">
+          🎤 Voice recognition requires Chrome, Edge, or Safari.
+        </p>
+        <p className="text-xs text-yellow-600 mt-1">
+          Please type your answer or use a supported browser.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Voice Status Indicator */}
+      <div className="flex items-center justify-center gap-3">
+        <motion.div
+          animate={isListening ? {
+            scale: [1, 1.2, 1],
+            opacity: [1, 0.7, 1]
+          } : {}}
+          transition={{
+            duration: 1.5,
+            repeat: isListening ? Infinity : 0
+          }}
+          className={`p-3 rounded-full ${
+            isListening
+              ? "bg-gradient-to-r from-green-500 to-emerald-600"
+              : "bg-gray-300"
+          }`}
+        >
+          {isListening ? (
+            <Mic className="h-6 w-6 text-white" />
+          ) : (
+            <MicOff className="h-6 w-6 text-gray-600" />
+          )}
+        </motion.div>
+
+        <div className="text-sm">
+          {isListening ? (
+            <div>
+              <p className="text-green-600 font-medium">
+                🎤 Listening...
+                {speechDetected && <span className="ml-2 text-blue-600">🗣️ Speech detected!</span>}
+                {audioDetected && !speechDetected && <span className="ml-2 text-orange-600">🔊 Sound detected</span>}
+              </p>
+              {isListening && !audioDetected && (
+                <p className="text-xs text-yellow-600 mt-1">
+                  ⚠️ No audio input detected - check microphone settings
+                </p>
+              )}
+            </div>
+          ) : disabled ? (
+            <p className="text-gray-400">Microphone paused</p>
+          ) : (
+            <p className="text-gray-500">Speak to answer</p>
+          )}
+        </div>
+      </div>
+
+      {/* Microphone Troubleshooting */}
+      {isListening && !audioDetected && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs space-y-2"
+        >
+          <p className="font-semibold text-yellow-800">🎤 Microphone Issue Detected</p>
+          <ul className="text-yellow-700 space-y-1 list-disc list-inside">
+            <li>Check if AirPods are selected as input device in System Settings</li>
+            <li>Try speaking louder or closer to the microphone</li>
+            <li>Check browser permissions: Settings → Privacy → Microphone</li>
+            <li>Try disconnecting and reconnecting AirPods</li>
+            <li>Test microphone in System Settings first</li>
+          </ul>
+          <button
+            onClick={() => window.open('chrome://settings/content/microphone', '_blank')}
+            className="text-blue-600 underline hover:text-blue-800"
+          >
+            Open Browser Microphone Settings
+          </button>
+        </motion.div>
+      )}
+
+      {/* Interim transcript (what you're saying right now) */}
+      {interimText && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700 italic text-center"
+        >
+          {interimText}...
+        </motion.div>
+      )}
+
+      {/* Error display */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700 text-center"
+        >
+          {error}
+        </motion.div>
+      )}
+
+      {/* No-speech warning after multiple failures */}
+      {noSpeechCount >= 3 && isListening && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-3 bg-orange-50 border border-orange-200 rounded-lg text-xs space-y-2"
+        >
+          <p className="font-semibold text-orange-800">🎤 Speech Recognition Timing Out ({noSpeechCount}x)</p>
+          <p className="text-orange-700">
+            Your microphone is working, but speech recognition isn't detecting clear speech.
+          </p>
+          <ul className="text-orange-700 space-y-1 list-disc list-inside">
+            <li><strong>Speak LOUDER and CLEARER</strong> - recognition needs strong audio signal</li>
+            <li>Move AirPods closer to your mouth</li>
+            <li>Reduce background noise (turn off fans, music, etc.)</li>
+            <li>Try saying: "Hello this is a test" very clearly</li>
+            <li>Check internet connection (speech recognition uses Google servers)</li>
+          </ul>
+          <div className="pt-2 border-t border-orange-300">
+            <p className="font-semibold text-orange-800 mb-1">💡 Alternative: Use Text Input</p>
+            <p className="text-orange-700">
+              Toggle the microphone button OFF and type your answers instead. Works perfectly!
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Info */}
+      <p className="text-xs text-gray-400 text-center">
+        💡 Speak loudly and clearly - speech recognition needs strong audio signal!
+      </p>
+    </div>
+  );
+}
+
