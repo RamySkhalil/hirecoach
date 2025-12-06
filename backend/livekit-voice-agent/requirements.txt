@@ -1,5 +1,5 @@
 # LiveKit Agents Framework
-livekit-agents>=0.8.0
+livekit-agents[hedra,images]>=1.2.0
 
 # OpenAI plugin for Realtime API
 livekit-plugins-openai>=0.6.0

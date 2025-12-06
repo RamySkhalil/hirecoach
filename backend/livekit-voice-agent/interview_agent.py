@@ -20,10 +20,11 @@ Setup:
 from dotenv import load_dotenv
 import os
 import httpx
+from PIL import Image
 
 from livekit import agents, rtc
 from livekit.agents import AgentServer, AgentSession, Agent, room_io
-from livekit.plugins import noise_cancellation, silero
+from livekit.plugins import noise_cancellation, silero, hedra
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from livekit.agents import AgentSession, inference
 
@@ -35,7 +36,8 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 print("DEBUG LIVEKIT_URL:", os.getenv("LIVEKIT_URL"))
 print("DEBUG LIVEKIT_API_KEY:", os.getenv("LIVEKIT_API_KEY"))
-print("DEBUG LIVEKIT_API_SECRET:", os.getenv("LIVEKIT_API_SECRET")[:6] + "...")
+print("DEBUG LIVEKIT_API_SECRET:", os.getenv("LIVEKIT_API_SECRET")[:6] + "..." if os.getenv("LIVEKIT_API_SECRET") else "Not set")
+print("DEBUG HEDRA_API_KEY:", "Set" if os.getenv("HEDRA_API_KEY") else "Not set")
 print("DEBUG BACKEND_URL:", BACKEND_URL)
 os.environ.pop("SSL_CERT_FILE", None)
 
@@ -185,6 +187,34 @@ async def interview_agent_handler(ctx: agents.JobContext):
     # Track if interview is complete
     interview_complete = False
     
+    # Load avatar image
+    avatar_image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "avatar.png")
+    avatar_image = None
+    
+    if os.path.exists(avatar_image_path):
+        try:
+            avatar_image = Image.open(avatar_image_path)
+            print(f"✅ Loaded avatar image from: {avatar_image_path}")
+        except Exception as e:
+            print(f"⚠️ Failed to load avatar image: {e}")
+    else:
+        print(f"⚠️ Avatar image not found at: {avatar_image_path}")
+    
+    # Initialize Hedra avatar if image is available and API key is set
+    avatar = None
+    if avatar_image and os.getenv("HEDRA_API_KEY"):
+        try:
+            avatar = hedra.AvatarSession(
+                avatar_image=avatar_image,
+                avatar_participant_name="AI Interview Coach",
+            )
+            print("✅ Hedra avatar initialized")
+        except Exception as e:
+            print(f"⚠️ Failed to initialize Hedra avatar: {e}")
+            avatar = None
+    elif not os.getenv("HEDRA_API_KEY"):
+        print("⚠️ HEDRA_API_KEY not set, avatar disabled")
+    
     # Set up event handlers to capture conversation
     @session.on("user_speech_committed")
     def on_user_speech(speech):
@@ -197,7 +227,7 @@ async def interview_agent_handler(ctx: agents.JobContext):
         print(f"👤 User said: {speech.text[:100]}...")
     
     @session.on("agent_speech_committed")
-    async def on_agent_speech(speech):
+    def on_agent_speech(speech):
         """Capture agent's speech"""
         nonlocal interview_complete
         
@@ -217,18 +247,36 @@ async def interview_agent_handler(ctx: agents.JobContext):
             interview_complete = True
             print(f"✅ Interview complete! Saving transcript and ending session...")
             
-            # Save transcript
-            await save_interview_transcript(session_id, transcript, agent.questions_asked)
+            # Create async task for saving transcript and disconnecting
+            async def save_and_disconnect():
+                await save_interview_transcript(session_id, transcript, agent.questions_asked)
+                
+                # Wait a moment for the message to be delivered
+                import asyncio
+                await asyncio.sleep(3)
+                
+                # Disconnect the room to end the interview
+                await ctx.room.disconnect()
+                print(f"🔚 Room disconnected. Interview session {session_id} ended.")
             
-            # Wait a moment for the message to be delivered
+            # Schedule the async work
             import asyncio
-            await asyncio.sleep(3)
-            
-            # Disconnect the room to end the interview
-            await ctx.room.disconnect()
-            print(f"🔚 Room disconnected. Interview session {session_id} ended.")
+            asyncio.create_task(save_and_disconnect())
+    
+    # Start the avatar if available
+    if avatar:
+        try:
+            print("🎬 Starting Hedra avatar...")
+            await avatar.start(session, room=ctx.room)
+            print("✅ Hedra avatar started and joined the room")
+        except Exception as e:
+            print(f"⚠️ Failed to start avatar: {e}")
+            avatar = None
     
     # Start the agent session
+    # Note: The avatar publishes on behalf of the agent, but the agent participant still exists
+    # The frontend filters out the agent participant to only show user + avatar
+    # Transcriptions are enabled by default in AgentSession
     await session.start(
         room=ctx.room,
         agent=agent,
@@ -264,28 +312,42 @@ async def interview_agent_handler(ctx: agents.JobContext):
     
     # Monitor room for disconnection and save transcript when interview ends
     @ctx.room.on("participant_disconnected")
-    async def on_participant_disconnected(participant):
+    def on_participant_disconnected(participant):
         """Called when the candidate leaves the room"""
         if participant.identity == "agent" or participant.kind != "standard":
             return  # Don't trigger on agent disconnect
             
         print(f"📝 Participant {participant.identity} disconnected. Saving transcript...")
         
-        # Save the conversation transcript to backend
-        await save_interview_transcript(session_id, transcript, agent.questions_asked)
+        # Create async task for saving transcript
+        async def save_on_disconnect():
+            await save_interview_transcript(session_id, transcript, agent.questions_asked)
+            print(f"✅ Interview session {session_id} completed")
         
-        print(f"✅ Interview session {session_id} completed")
+        # Schedule the async work
+        import asyncio
+        asyncio.create_task(save_on_disconnect())
 
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🎤 LiveKit AI Interview Agent")
+    print("🎤 LiveKit AI Interview Agent with Hedra Avatar")
     print("=" * 60)
     print(f"LIVEKIT_URL: {os.getenv('LIVEKIT_URL', 'Not set')}")
     print(f"LIVEKIT_API_KEY: {'Set' if os.getenv('LIVEKIT_API_KEY') else 'Not set'}")
     print(f"OPENAI_API_KEY: {'Set' if os.getenv('OPENAI_API_KEY') else 'Not set'}")
+    print(f"HEDRA_API_KEY: {'Set' if os.getenv('HEDRA_API_KEY') else 'Not set'}")
     print(f"BACKEND_URL: {BACKEND_URL}")
     print("=" * 60)
+    
+    # Check if avatar.png exists
+    avatar_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "avatar.png")
+    if os.path.exists(avatar_path):
+        print(f"✅ Avatar image found: {avatar_path}")
+    else:
+        print(f"⚠️ Avatar image NOT found: {avatar_path}")
+        print("   Avatar feature will be disabled")
+    
     print("\nWaiting for interview sessions...")
     print("Listening for rooms: interview-*")
     print("Will fetch job_title/seniority from backend for each session")
