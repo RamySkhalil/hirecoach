@@ -12,6 +12,7 @@ import {
   VideoOff,
   Mic,
   Volume2,
+  LogOut,
 } from "lucide-react";
 import { getSession } from "@/lib/api";
 
@@ -239,6 +240,13 @@ export default function InterviewSession() {
     };
   }, [sessionId, router, getToken, user, roomInstance]);
 
+  const handleLeaveInterview = () => {
+    // Disconnect from LiveKit
+    roomInstance.disconnect();
+    // Navigate to report page
+    router.push(`/interview/report/${sessionId}`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center pt-20">
@@ -270,17 +278,28 @@ export default function InterviewSession() {
     <main className="min-h-screen bg-gray-50 pt-20">
       <div className="h-[calc(100vh-5rem)] flex flex-col">
         {/* Progress Bar */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-3">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-gray-700">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Question {currentIndex} of {totalQuestions}
               </span>
-              <span className="text-sm font-medium text-blue-600">
-                {Math.round((currentIndex / totalQuestions) * 100)}% Complete
-              </span>
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                  {Math.round((currentIndex / totalQuestions) * 100)}% Complete
+                </span>
+                <motion.button
+                  onClick={handleLeaveInterview}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg text-sm"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Leave & Get Report
+                </motion.button>
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${(currentIndex / totalQuestions) * 100}%` }}
@@ -514,13 +533,20 @@ function MyVideoConference() {
   });
   
   return (
-    <div className="h-full w-full">
-      <GridLayout 
-        tracks={filteredTracks}
-        style={{ height: '100%', width: '100%' }}
-      >
-        <ParticipantTile />
-      </GridLayout>
+    <div className="h-full w-full flex items-center justify-center bg-gray-950">
+      {filteredTracks.length > 0 ? (
+        <GridLayout 
+          tracks={filteredTracks}
+          style={{ height: '100%', width: '100%' }}
+        >
+          <ParticipantTile />
+        </GridLayout>
+      ) : (
+        <div className="text-white text-center p-8">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" />
+          <p>Waiting for AI Interview Coach to join...</p>
+        </div>
+      )}
     </div>
   );
 }

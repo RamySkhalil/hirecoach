@@ -62,6 +62,7 @@ class InterviewSession(Base):
     # Results
     overall_score = Column(Integer, nullable=True)  # 0-100
     summary_json = Column(JSON, nullable=True)  # Stores full summary report
+    transcript_json = Column(JSON, nullable=True)  # Stores voice interview transcript
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

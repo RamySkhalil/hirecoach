@@ -317,6 +317,9 @@ def complete_voice_interview(
                 "summary": session.summary_json
             }
         
+        # Store the transcript in the session
+        session.transcript_json = request.transcript
+        
         # Generate summary from voice transcript using LLM
         # Extract questions and answers from transcript
         conversation_text = "\n".join([
@@ -334,6 +337,11 @@ def complete_voice_interview(
             questions_asked=request.questions_asked,
             total_questions=session.num_questions
         )
+        
+        # Add completion info
+        summary_data["questions_completed"] = request.questions_asked
+        summary_data["total_questions"] = session.num_questions
+        summary_data["completion_status"] = "completed" if request.questions_asked >= session.num_questions else "partial"
         
         # Update session with summary and mark as completed
         session.status = "completed"
@@ -399,6 +407,89 @@ def get_session(session_id: str, db: Session = Depends(get_db)):
         "answers_count": len(answers),
         "overall_score": session.overall_score,
         "summary": session.summary_json
+    }
+
+
+@router.get("/session/{session_id}/report")
+def get_or_generate_report(
+    session_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get or generate interview report at any time.
+    Works even if interview was interrupted or incomplete.
+    """
+    # Validate session exists
+    session = db.query(InterviewSession).filter(
+        InterviewSession.id == session_id
+    ).first()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Interview session not found")
+    
+    # If already has a complete summary, return it
+    if session.summary_json and session.status == "completed":
+        return {
+            "session_id": session_id,
+            "status": "completed",
+            "summary": session.summary_json,
+            "questions_completed": session.num_questions,
+            "total_questions": session.num_questions
+        }
+    
+    # Get any existing transcript from session (for voice interviews)
+    transcript_data = session.transcript_json if hasattr(session, 'transcript_json') else None
+    
+    if not transcript_data or len(transcript_data) == 0:
+        # No transcript yet - interview just started or no data
+        return {
+            "session_id": session_id,
+            "status": "in_progress",
+            "message": "Interview in progress - not enough data yet for a report",
+            "summary": None
+        }
+    
+    # Generate report from whatever transcript we have
+    conversation_text = "\n".join([
+        f"{'Agent' if item.get('role') == 'assistant' else 'Candidate'}: {item.get('content', '')}"
+        for item in transcript_data
+    ])
+    
+    # Count questions asked
+    questions_asked = len([t for t in transcript_data if t.get('role') == 'assistant']) // 2
+    
+    # Generate summary
+    from app.services.llm_service import LLMService
+    
+    summary_data = LLMService.summarize_voice_interview(
+        job_title=session.job_title,
+        seniority=session.seniority,
+        conversation_transcript=conversation_text,
+        questions_asked=questions_asked,
+        total_questions=session.num_questions
+    )
+    
+    # Add completion status to summary
+    summary_data["questions_completed"] = questions_asked
+    summary_data["total_questions"] = session.num_questions
+    summary_data["completion_status"] = "completed" if questions_asked >= session.num_questions else "partial"
+    
+    # Update session with summary
+    session.summary_json = summary_data
+    session.overall_score = summary_data.get("overall_score", 0)
+    if questions_asked >= session.num_questions:
+        session.status = "completed"
+        session.completed_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(session)
+    
+    return {
+        "session_id": session_id,
+        "status": session.status,
+        "summary": summary_data,
+        "questions_completed": questions_asked,
+        "total_questions": session.num_questions
     }
 
 

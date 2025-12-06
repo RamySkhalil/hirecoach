@@ -542,6 +542,7 @@ Be specific, constructive, and encouraging."""
 
 Job: {seniority} {job_title}
 Questions Asked: {questions_asked}/{total_questions}
+{"⚠️ INTERVIEW PARTIALLY COMPLETED - Candidate left early" if questions_asked < total_questions else "✅ INTERVIEW FULLY COMPLETED"}
 
 Full Interview Conversation:
 {conversation_transcript}
@@ -549,10 +550,26 @@ Full Interview Conversation:
 Based on this interview conversation, provide a comprehensive analysis with:
 
 1. OVERALL SCORE (0-100): Rate the candidate's overall interview performance
+   - If incomplete, score based on what was demonstrated so far
+   - Consider engagement level and reason for early exit (if apparent)
+
 2. STRENGTHS (2-4 items): Specific things the candidate did well
+   - Focus on demonstrated competencies
+   - Highlight positive communication patterns
+
 3. WEAKNESSES (2-4 items): Areas that need improvement
+   - If interview was cut short, mention completion as a weakness
+   - Identify any communication gaps or areas lacking depth
+   - Note if responses seemed rushed or incomplete
+
 4. ACTION PLAN (3-5 items): Concrete, actionable steps to improve
+   - If incomplete: Include "Complete full interview sessions to build stamina and consistency"
+   - Provide specific, measurable recommendations
+   - Prioritize most impactful improvements
+
 5. SUGGESTED ROLES (2-4 items): Job titles/levels that match their performance
+   - Be realistic based on demonstrated skills
+   - If incomplete interview, suggest roles that match current performance level
 
 Consider:
 - Quality and depth of answers
@@ -561,6 +578,7 @@ Consider:
 - Behavioral examples and storytelling
 - Overall professionalism
 - Answer relevance to questions
+- Commitment to completing the interview
 
 Return a JSON object with this exact structure:
 {{
@@ -571,7 +589,8 @@ Return a JSON object with this exact structure:
   "suggested_roles": ["role 1", "role 2", ...]
 }}
 
-Be specific, constructive, and encouraging. Focus on actionable feedback."""
+Be specific, constructive, and encouraging. Focus on actionable feedback.
+If the interview was incomplete, be honest but supportive about the need to complete full sessions."""
 
         messages = [
             {"role": "system", "content": "You are an expert career coach. Always respond with valid JSON. Be honest but supportive and constructive."},
