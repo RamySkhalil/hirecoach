@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { 
   Sparkles, Target, Award, TrendingUp, ArrowRight, CheckCircle2,
-  Mic, Brain, MessageSquare, BarChart3, Clock, Shield, FileText, Zap, Wand2, Bot
+  Mic, Brain, MessageSquare, BarChart3, Clock, Shield, FileText, Zap, Wand2, Bot, Briefcase
 } from "lucide-react";
 
 export default function Home() {
@@ -40,14 +40,14 @@ export default function Home() {
               </span>
               <br />
               <span className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                With AI Coaching
+                Or Hire Better With AI
               </span>
             </h1>
 
             {/* Subheadline */}
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Practice interviews, optimize your CV, and transform your resume with AI. 
-              Everything you need to ace your job search.
+              Job seekers practice interviews & optimize CVs. Recruiters run AI-powered interviews and ATS screening. 
+              Everything you need for your career journey.
             </p>
 
             {/* Feature Pills */}
@@ -62,30 +62,33 @@ export default function Home() {
                 ✨ CV Rewriter
               </span>
               <span className="px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 shadow-md">
-                🎯 ATS Optimized
+                🤖 AI Hiring Assistant
+              </span>
+              <span className="px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 shadow-md">
+                📊 ATS Screening
               </span>
             </div>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/interview/setup">
+              <Link href="/onboarding/role">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-10 py-4 rounded-lg font-semibold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center gap-2"
                 >
-                  Start Interview
+                  I'm a Candidate
                   <ArrowRight className="h-5 w-5" />
                 </motion.button>
               </Link>
-              <Link href="/cv">
+              <Link href="/onboarding/role">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-700 px-10 py-4 rounded-lg font-semibold text-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2"
                 >
-                  <FileText className="h-5 w-5" />
-                  Analyze CV
+                  <Briefcase className="h-5 w-5" />
+                  I'm a Recruiter
                 </motion.button>
               </Link>
             </div>
@@ -303,6 +306,34 @@ export default function Home() {
               </div>
             </motion.div>
           </div>
+
+          {/* Recruiter Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.5 }}
+            className="mt-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl p-8 text-white"
+          >
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                <h3 className="text-2xl font-bold mb-2">New for Recruiters</h3>
+                <p className="text-indigo-100">
+                  AI-powered ATS and video interviews. Screen candidates faster with automated CV-to-JD matching.
+                </p>
+              </div>
+              <Link href="/onboarding/role">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
+                >
+                  Explore Recruiter Tools
+                  <ArrowRight className="h-5 w-5" />
+                </motion.button>
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -632,6 +663,9 @@ export default function Home() {
                 </span>
                 <span className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm">
                   📊 Career Analytics Dashboard
+                </span>
+                <span className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm">
+                  🧑‍💼 Recruiter ATS Dashboard
                 </span>
               </div>
             </div>

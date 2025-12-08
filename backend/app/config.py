@@ -47,6 +47,17 @@ class Settings(BaseSettings):
     livekit_api_key: Optional[str] = None
     livekit_api_secret: Optional[str] = None
 
+    # Clerk Authentication
+    clerk_secret_key: Optional[str] = None
+    
+    # Cloudflare R2 Storage
+    r2_bucket_name: Optional[str] = None
+    r2_account_id: Optional[str] = None
+    r2_access_key_id: Optional[str] = None
+    r2_secret_access_key: Optional[str] = None
+    r2_endpoint_url: Optional[str] = None
+    r2_public_url: Optional[str] = None  # Custom domain/CDN URL
+    
     # App settings
     app_name: str = "Interviewly"
     debug: bool = True

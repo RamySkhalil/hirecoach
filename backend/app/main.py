@@ -8,7 +8,7 @@ from datetime import datetime
 from app.config import settings
 from app.db import init_db
 from app.schemas import HealthCheckResponse
-from app.routes import interview, media, cv, cv_rewriter, livekit_routes, conversational_interview, career_agent, health, pricing, admin
+from app.routes import interview, media, cv, cv_rewriter, livekit_routes, conversational_interview, career_agent, health, pricing, admin, auth, ats
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -31,6 +31,8 @@ app.add_middleware(
 app.include_router(health.router)  # Health checks
 app.include_router(pricing.router)  # Pricing plans (public)
 app.include_router(admin.router)  # Admin analytics (protect in production!)
+app.include_router(auth.router)  # Authentication & user roles
+app.include_router(ats.router)  # ATS endpoints for recruiters
 app.include_router(interview.router)
 app.include_router(conversational_interview.router)  # Conversational AI interviews
 app.include_router(media.router)

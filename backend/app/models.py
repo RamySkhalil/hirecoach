@@ -197,6 +197,12 @@ class SubscriptionStatus(str, enum.Enum):
     TRIAL = "trial"
 
 
+class UserRole(str, enum.Enum):
+    """User role enum."""
+    RECRUITER = "RECRUITER"
+    CANDIDATE = "CANDIDATE"
+
+
 class User(Base):
     """
     User model with Clerk integration.
@@ -210,6 +216,9 @@ class User(Base):
     email = Column(String(255), nullable=False, unique=True, index=True)
     full_name = Column(String(255), nullable=True)
     avatar_url = Column(String(500), nullable=True)
+    
+    # User role (RECRUITER or CANDIDATE)
+    role = Column(SQLEnum(UserRole), nullable=True, index=True)
     
     # User preferences
     preferred_language = Column(String(10), default="en")
@@ -282,16 +291,6 @@ class JobStatus(str, enum.Enum):
     CLOSED = "closed"
 
 
-class ApplicationStatus(str, enum.Enum):
-    """Application status enum."""
-    SUBMITTED = "submitted"
-    SCREENING = "screening"
-    INTERVIEW = "interview"
-    OFFERED = "offered"
-    REJECTED = "rejected"
-    WITHDRAWN = "withdrawn"
-
-
 class CVRewriteStyle(str, enum.Enum):
     """CV rewrite style enum."""
     MODERN = "modern"
@@ -356,54 +355,8 @@ class JobPosting(Base):
     closed_at = Column(DateTime, nullable=True)
     
     # Relationships
-    applications = relationship("Application", back_populates="job")
-
-
-class Application(Base):
-    """
-    Job application model.
-    """
-    __tablename__ = "applications"
-    
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    job_id = Column(String(36), ForeignKey("job_postings.id"), nullable=False)
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=True)  # Applicant
-    
-    # Applicant information
-    applicant_email = Column(String(255), nullable=False)
-    applicant_name = Column(String(255), nullable=False)
-    applicant_phone = Column(String(50), nullable=True)
-    
-    # Application documents
-    cv_id = Column(String(36), ForeignKey("cv_analyses.id"), nullable=True)
-    cover_letter = Column(Text, nullable=True)
-    portfolio_url = Column(String(500), nullable=True)
-    linkedin_url = Column(String(500), nullable=True)
-    
-    # Status and scoring
-    status = Column(SQLEnum(ApplicationStatus), nullable=False, default=ApplicationStatus.SUBMITTED)
-    cv_match_score = Column(Integer, nullable=True)  # 0-100 match with job
-    interview_score = Column(Integer, nullable=True)  # From mock interview
-    
-    # Interview details
-    interview_session_id = Column(String(36), ForeignKey("interview_sessions.id"), nullable=True)
-    interview_scheduled_at = Column(DateTime, nullable=True)
-    interview_completed_at = Column(DateTime, nullable=True)
-    
-    # Notes and feedback
-    recruiter_notes = Column(Text, nullable=True)
-    rejection_reason = Column(Text, nullable=True)
-    
-    # External integration
-    external_id = Column(String(255), nullable=True)
-    
-    # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    reviewed_at = Column(DateTime, nullable=True)
-    
-    # Relationships
-    job = relationship("JobPosting", back_populates="applications")
+    # Note: Old JobPosting model - kept for backward compatibility
+    # New ATS system uses Job model instead
 
 
 class CVRewrite(Base):
@@ -662,4 +615,297 @@ class TokenUsageLog(Base):
     
     def __repr__(self):
         return f"<TokenUsageLog(user_id={self.user_id}, model={self.model_name}, cost=${self.cost_usd})>"
+
+
+# ========================================
+# ATS (APPLICANT TRACKING SYSTEM) MODELS
+# ========================================
+
+class Company(Base):
+    """
+    Company model for recruiters.
+    """
+    __tablename__ = "companies"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(255), nullable=False)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    recruiter_profiles = relationship("RecruiterProfile", back_populates="company")
+    jobs = relationship("Job", back_populates="company")
+
+
+class RecruiterProfile(Base):
+    """
+    Recruiter profile linked to a user.
+    """
+    __tablename__ = "recruiter_profiles"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=True, index=True)
+    job_title = Column(String(255), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    user = relationship("User")
+    company = relationship("Company", back_populates="recruiter_profiles")
+
+
+class EmploymentType(str, enum.Enum):
+    """Employment type enum."""
+    FULL_TIME = "FULL_TIME"
+    PART_TIME = "PART_TIME"
+    CONTRACT = "CONTRACT"
+    INTERNSHIP = "INTERNSHIP"
+    TEMPORARY = "TEMPORARY"
+
+
+class JobStatus(str, enum.Enum):
+    """Job status enum for ATS."""
+    DRAFT = "DRAFT"
+    OPEN = "OPEN"
+    PAUSED = "PAUSED"
+    CLOSED = "CLOSED"
+
+
+class Job(Base):
+    """
+    Job posting model for ATS.
+    """
+    __tablename__ = "jobs"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=True, index=True)
+    
+    # Job details
+    title = Column(String(255), nullable=False)
+    location = Column(String(255), nullable=True)
+    employment_type = Column(SQLEnum(EmploymentType), nullable=True)
+    description = Column(Text, nullable=False)
+    requirements_raw = Column(Text, nullable=True)  # Original JD text
+    
+    # Status
+    status = Column(SQLEnum(JobStatus), nullable=False, default=JobStatus.DRAFT, index=True)
+    
+    # Compensation
+    min_salary = Column(Float, nullable=True)
+    max_salary = Column(Float, nullable=True)
+    currency = Column(String(10), nullable=True, default="USD")
+    
+    # Creator
+    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    company = relationship("Company", back_populates="jobs")
+    skills = relationship("JobSkill", back_populates="job", cascade="all, delete-orphan")
+    applications = relationship("Application", back_populates="job")
+
+
+class JobSkill(Base):
+    """
+    Skills required for a job.
+    """
+    __tablename__ = "job_skills"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    job_id = Column(String(36), ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    skill_name = Column(String(255), nullable=False)
+    weight = Column(Integer, default=1, nullable=False)  # Importance weight (1-10)
+    
+    # Relationships
+    job = relationship("Job", back_populates="skills")
+
+
+class Candidate(Base):
+    """
+    Candidate model (separate from User - for external applicants).
+    """
+    __tablename__ = "candidates"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    full_name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False, index=True)
+    phone = Column(String(50), nullable=True)
+    location = Column(String(255), nullable=True)
+    years_experience = Column(Integer, nullable=True)
+    current_title = Column(String(255), nullable=True)
+    resume_url = Column(String(500), nullable=True)  # Path to file in storage
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    applications = relationship("Application", back_populates="candidate")
+
+
+class ApplicationStatus(str, enum.Enum):
+    """Application status enum for ATS."""
+    APPLIED = "APPLIED"
+    SCREENING = "SCREENING"
+    SHORTLISTED = "SHORTLISTED"
+    INTERVIEW_SCHEDULED = "INTERVIEW_SCHEDULED"
+    OFFERED = "OFFERED"
+    REJECTED = "REJECTED"
+    HIRED = "HIRED"
+
+
+class Application(Base):
+    """
+    Job application model.
+    """
+    __tablename__ = "applications"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    job_id = Column(String(36), ForeignKey("jobs.id"), nullable=False, index=True)
+    candidate_id = Column(String(36), ForeignKey("candidates.id"), nullable=False, index=True)
+    
+    # Status and scoring
+    status = Column(SQLEnum(ApplicationStatus), nullable=False, default=ApplicationStatus.APPLIED, index=True)
+    source = Column(String(50), nullable=True)  # "portal", "manual_upload", etc.
+    applied_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    fit_score = Column(Float, nullable=True)  # 0-100 CV-to-JD match score
+    ai_interview_score = Column(Float, nullable=True)  # 0-100 AI interview score
+    notes = Column(Text, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    job = relationship("Job", back_populates="applications")
+    candidate = relationship("Candidate", back_populates="applications")
+    screenings = relationship("Screening", back_populates="application")
+    interviews = relationship("Interview", back_populates="application")
+
+
+class Screening(Base):
+    """
+    CV-to-JD screening result.
+    """
+    __tablename__ = "screenings"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    application_id = Column(String(36), ForeignKey("applications.id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    # Scoring results
+    fit_score = Column(Float, nullable=False)  # 0-100
+    skills_matched = Column(JSON, nullable=True)  # List of matched skills
+    skills_missing = Column(JSON, nullable=True)  # List of missing skills
+    embedding_model = Column(String(100), nullable=True)  # e.g. "text-embedding-3-large"
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    application = relationship("Application", back_populates="screenings")
+
+
+class InterviewType(str, enum.Enum):
+    """Interview type enum."""
+    HUMAN = "HUMAN"
+    AI = "AI"
+
+
+class InterviewStatus(str, enum.Enum):
+    """Interview status enum."""
+    SCHEDULED = "SCHEDULED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    NO_SHOW = "NO_SHOW"
+
+
+class Interview(Base):
+    """
+    Interview model (for recruiter ATS interviews).
+    """
+    __tablename__ = "interviews"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    application_id = Column(String(36), ForeignKey("applications.id"), nullable=False, index=True)
+    
+    # Interview details
+    type = Column(SQLEnum(InterviewType), nullable=False)
+    status = Column(SQLEnum(InterviewStatus), nullable=False, default=InterviewStatus.SCHEDULED, index=True)
+    
+    # Scheduling
+    scheduled_start = Column(DateTime, nullable=True)
+    scheduled_end = Column(DateTime, nullable=True)
+    actual_start = Column(DateTime, nullable=True)
+    actual_end = Column(DateTime, nullable=True)
+    
+    # LiveKit integration
+    livekit_room_name = Column(String(255), nullable=True)
+    livekit_recording_id = Column(String(255), nullable=True)
+    recording_url = Column(String(500), nullable=True)  # S3/R2 URL
+    
+    # Creator
+    created_by_user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    application = relationship("Application", back_populates="interviews")
+    metrics = relationship("InterviewMetric", back_populates="interview", uselist=False)
+    feedback = relationship("InterviewFeedback", back_populates="interview")
+
+
+class InterviewMetric(Base):
+    """
+    Interview performance metrics (from AI or video analytics).
+    """
+    __tablename__ = "interview_metrics"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    interview_id = Column(String(36), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    
+    # Scoring metrics
+    overall_score = Column(Float, nullable=True)  # 0-100
+    eye_contact_pct = Column(Float, nullable=True)  # 0-100
+    speech_fluency_score = Column(Float, nullable=True)  # 0-100
+    sentiment_score = Column(Float, nullable=True)  # -1 to 1
+    engagement_score = Column(Float, nullable=True)  # 0-100
+    notes = Column(Text, nullable=True)
+    raw_metrics = Column(JSON, nullable=True)  # Additional metrics as JSON
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    interview = relationship("Interview", back_populates="metrics")
+
+
+class InterviewFeedback(Base):
+    """
+    Human recruiter feedback on interviews.
+    """
+    __tablename__ = "interview_feedback"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    interview_id = Column(String(36), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, index=True)
+    reviewer_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    
+    # Feedback
+    rating = Column(Integer, nullable=True)  # 1-5 stars
+    comment = Column(Text, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    interview = relationship("Interview", back_populates="feedback")
 
