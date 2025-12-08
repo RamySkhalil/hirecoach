@@ -211,7 +211,7 @@ export default function PricingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20">
+    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-indigo-950 dark:to-purple-950 pt-20 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 py-16">
         {/* Header */}
         <motion.div

@@ -130,7 +130,7 @@ export default function CVAnalyzer() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pt-20">
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950 pt-20 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -142,7 +142,7 @@ export default function CVAnalyzer() {
             <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
               CV Analyzer
             </h1>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-400">
               Get AI-powered insights and ATS compatibility scores for your resume
             </p>
           </div>
@@ -153,13 +153,13 @@ export default function CVAnalyzer() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-2xl p-8"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8"
             >
-              <h2 className="text-2xl font-bold mb-6 text-gray-900">Upload Your CV</h2>
+              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Upload Your CV</h2>
 
               {/* File Upload */}
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   <FileText className="inline h-5 w-5 mr-2 text-blue-600" />
                   Resume File (PDF, DOCX, TXT)
                 </label>
@@ -177,7 +177,7 @@ export default function CVAnalyzer() {
                   >
                     <div className="text-center">
                       <Upload className="mx-auto h-12 w-12 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         {file ? file.name : "Click to upload or drag and drop"}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
@@ -190,7 +190,7 @@ export default function CVAnalyzer() {
 
               {/* Target Job */}
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   <Target className="inline h-5 w-5 mr-2 text-blue-600" />
                   Target Job Title (Optional)
                 </label>
@@ -199,13 +199,13 @@ export default function CVAnalyzer() {
                   value={targetJob}
                   onChange={(e) => setTargetJob(e.target.value)}
                   placeholder="e.g., Software Engineer, Product Manager"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-gray-900"
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-gray-900 dark:text-gray-100"
                 />
               </div>
 
               {/* Target Seniority */}
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Seniority Level
                 </label>
                 <div className="grid grid-cols-3 gap-4">
@@ -217,7 +217,7 @@ export default function CVAnalyzer() {
                       className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
                         targetSeniority === level
                           ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200"
                       }`}
                     >
                       {level.charAt(0).toUpperCase() + level.slice(1)}
@@ -272,12 +272,12 @@ export default function CVAnalyzer() {
                   className="space-y-6"
                 >
                   {/* Overall Scores */}
-                  <div className="bg-white rounded-2xl shadow-2xl p-8">
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-bold text-gray-900">Analysis Results</h2>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Analysis Results</h2>
                       <button
                         onClick={() => setAnalysis(null)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
                       >
                         <X className="h-6 w-6" />
                       </button>
@@ -290,7 +290,7 @@ export default function CVAnalyzer() {
                           <div className={`text-4xl font-bold mb-1 ${getScoreColor(analysis.overall_score)}`}>
                             {analysis.overall_score}
                           </div>
-                          <div className="text-sm font-medium text-gray-600">Overall Score</div>
+                          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Overall Score</div>
                         </div>
 
                         {analysis.ats_score !== undefined && (
@@ -299,7 +299,7 @@ export default function CVAnalyzer() {
                             <div className={`text-4xl font-bold mb-1 ${getScoreColor(analysis.ats_score)}`}>
                               {analysis.ats_score}
                             </div>
-                            <div className="text-sm font-medium text-gray-600">ATS Score</div>
+                            <div className="text-sm font-medium text-gray-600 dark:text-gray-400">ATS Score</div>
                           </div>
                         )}
                       </div>
@@ -311,7 +311,7 @@ export default function CVAnalyzer() {
                         {Object.entries(analysis.scores_breakdown).map(([key, value]) => (
                           <div key={key}>
                             <div className="flex justify-between items-center mb-1">
-                              <span className="text-sm font-medium text-gray-700 capitalize">
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
                                 {key}
                               </span>
                               <span className={`text-sm font-bold ${getScoreColor(value)}`}>
@@ -338,7 +338,7 @@ export default function CVAnalyzer() {
 
                   {/* Strengths */}
                   {analysis.strengths && analysis.strengths.length > 0 && (
-                    <div className="bg-white rounded-2xl shadow-2xl p-8">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-green-600">
                         <TrendingUp className="h-6 w-6" />
                         Strengths
@@ -347,7 +347,7 @@ export default function CVAnalyzer() {
                         {analysis.strengths.map((strength, idx) => (
                           <li key={idx} className="flex items-start gap-2">
                             <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                            <span className="text-gray-700">{strength}</span>
+                            <span className="text-gray-700 dark:text-gray-300">{strength}</span>
                           </li>
                         ))}
                       </ul>
@@ -356,7 +356,7 @@ export default function CVAnalyzer() {
 
                   {/* Weaknesses */}
                   {analysis.weaknesses && analysis.weaknesses.length > 0 && (
-                    <div className="bg-white rounded-2xl shadow-2xl p-8">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-orange-600">
                         <TrendingDown className="h-6 w-6" />
                         Areas for Improvement
@@ -365,7 +365,7 @@ export default function CVAnalyzer() {
                         {analysis.weaknesses.map((weakness, idx) => (
                           <li key={idx} className="flex items-start gap-2">
                             <XCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                            <span className="text-gray-700">{weakness}</span>
+                            <span className="text-gray-700 dark:text-gray-300">{weakness}</span>
                           </li>
                         ))}
                       </ul>
@@ -374,7 +374,7 @@ export default function CVAnalyzer() {
 
                   {/* Suggestions */}
                   {analysis.suggestions && analysis.suggestions.length > 0 && (
-                    <div className="bg-white rounded-2xl shadow-2xl p-8">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-blue-600">
                         <Lightbulb className="h-6 w-6" />
                         Suggestions
@@ -385,7 +385,7 @@ export default function CVAnalyzer() {
                             <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-600 text-sm font-bold flex-shrink-0">
                               {idx + 1}
                             </span>
-                            <span className="text-gray-700">{suggestion}</span>
+                            <span className="text-gray-700 dark:text-gray-300">{suggestion}</span>
                           </li>
                         ))}
                       </ul>
@@ -394,7 +394,7 @@ export default function CVAnalyzer() {
 
                   {/* Keywords */}
                   {(analysis.keywords_found || analysis.keywords_missing) && (
-                    <div className="bg-white rounded-2xl shadow-2xl p-8">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
                       <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-indigo-600">
                         <Tag className="h-6 w-6" />
                         Keywords
@@ -402,7 +402,7 @@ export default function CVAnalyzer() {
                       
                       {analysis.keywords_found && analysis.keywords_found.length > 0 && (
                         <div className="mb-4">
-                          <p className="text-sm font-medium text-gray-700 mb-2">Found:</p>
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Found:</p>
                           <div className="flex flex-wrap gap-2">
                             {analysis.keywords_found.map((keyword, idx) => (
                               <span
@@ -418,7 +418,7 @@ export default function CVAnalyzer() {
                       
                       {analysis.keywords_missing && analysis.keywords_missing.length > 0 && (
                         <div>
-                          <p className="text-sm font-medium text-gray-700 mb-2">Missing:</p>
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Missing:</p>
                           <div className="flex flex-wrap gap-2">
                             {analysis.keywords_missing.map((keyword, idx) => (
                               <span
@@ -446,10 +446,10 @@ export default function CVAnalyzer() {
                         <Wand2 className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-bold text-gray-900">
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           Ready to Improve Your CV?
                         </h3>
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 dark:text-gray-400">
                           Let AI apply all suggestions and rewrite your CV professionally
                         </p>
                       </div>
@@ -459,13 +459,13 @@ export default function CVAnalyzer() {
                       <Link href={`/cv/improve/${analysis.id}`}>
                         <motion.div
                           whileHover={{ scale: 1.02 }}
-                          className="p-5 bg-white border-2 border-purple-300 rounded-xl hover:border-purple-500 hover:shadow-lg transition-all cursor-pointer group"
+                          className="p-5 bg-white dark:bg-gray-800 border-2 border-purple-300 rounded-xl hover:border-purple-500 hover:shadow-lg transition-all cursor-pointer group"
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <Target className="h-5 w-5 text-purple-600" />
-                            <div className="font-bold text-gray-900">🎯 ATS Optimized</div>
+                            <div className="font-bold text-gray-900 dark:text-gray-100">🎯 ATS Optimized</div>
                           </div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
                             Best for online applications
                           </div>
                           <div className="mt-3 text-xs text-purple-600 group-hover:text-purple-700">
@@ -477,13 +477,13 @@ export default function CVAnalyzer() {
                       <Link href={`/rewriter?from_analysis=${analysis.id}`}>
                         <motion.div
                           whileHover={{ scale: 1.02 }}
-                          className="p-5 bg-white border-2 border-pink-300 rounded-xl hover:border-pink-500 hover:shadow-lg transition-all cursor-pointer group"
+                          className="p-5 bg-white dark:bg-gray-800 border-2 border-pink-300 rounded-xl hover:border-pink-500 hover:shadow-lg transition-all cursor-pointer group"
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <Sparkles className="h-5 w-5 text-pink-600" />
-                            <div className="font-bold text-gray-900">✨ Choose Style</div>
+                            <div className="font-bold text-gray-900 dark:text-gray-100">✨ Choose Style</div>
                           </div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
                             Modern, Minimal, or Executive
                           </div>
                           <div className="mt-3 text-xs text-pink-600 group-hover:text-pink-700">
@@ -496,7 +496,7 @@ export default function CVAnalyzer() {
                     <div className="bg-purple-100/50 rounded-lg p-4 border border-purple-200">
                       <div className="flex items-start gap-3">
                         <Lightbulb className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                        <div className="text-sm text-gray-700">
+                        <div className="text-sm text-gray-700 dark:text-gray-300">
                           <span className="font-semibold">Pro Tip:</span> The comparison view shows before/after changes,
                           while the rewriter gives you full control over style and formatting.
                         </div>
@@ -510,10 +510,10 @@ export default function CVAnalyzer() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="bg-white/60 backdrop-blur-sm rounded-2xl border-2 border-dashed border-gray-300 p-12 flex flex-col items-center justify-center text-center"
+                  className="bg-white dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl border-2 border-dashed border-gray-300 p-12 flex flex-col items-center justify-center text-center"
                 >
                   <FileText className="h-24 w-24 text-gray-300 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
                     Upload a CV to see results
                   </h3>
                   <p className="text-gray-500">

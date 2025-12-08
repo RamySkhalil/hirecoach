@@ -36,7 +36,7 @@ export default function InterviewSetup() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pt-20">
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950 pt-20 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-6 py-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -45,14 +45,14 @@ export default function InterviewSetup() {
         >
           {/* Header */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-blue-100 mb-6">
-              <Sparkles className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-gray-700">AI Interview Coach</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full shadow-lg border border-blue-100 dark:border-blue-900 mb-6">
+              <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">AI Interview Coach</span>
             </div>
-            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
               Set Up Your Interview
             </h1>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-400">
               Customize your mock interview to match your target role
             </p>
           </div>
@@ -62,13 +62,13 @@ export default function InterviewSetup() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl shadow-2xl p-8 md:p-12"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 md:p-12"
           >
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Job Title */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Briefcase className="h-5 w-5 text-blue-600" />
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   Job Title
                 </label>
                 <input
@@ -78,15 +78,15 @@ export default function InterviewSetup() {
                     setFormData({ ...formData, job_title: e.target.value })
                   }
                   placeholder="e.g., Software Engineer, Product Manager, Data Scientist"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-gray-900"
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 transition-all outline-none text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-900 placeholder:text-gray-500 dark:placeholder:text-gray-500"
                   required
                 />
               </div>
 
               {/* Seniority */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Trophy className="h-5 w-5 text-blue-600" />
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  <Trophy className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   Seniority Level
                 </label>
                 <div className="grid grid-cols-3 gap-4">
@@ -103,7 +103,7 @@ export default function InterviewSetup() {
                       className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
                         formData.seniority === level
                           ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                       }`}
                     >
                       {level.charAt(0).toUpperCase() + level.slice(1)}
@@ -114,8 +114,8 @@ export default function InterviewSetup() {
 
               {/* Language */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Globe className="h-5 w-5 text-blue-600" />
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   Interview Language
                 </label>
                 <div className="grid grid-cols-2 gap-4">
@@ -125,7 +125,7 @@ export default function InterviewSetup() {
                     className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
                       formData.language === "en"
                         ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                     }`}
                   >
                     English
@@ -136,7 +136,7 @@ export default function InterviewSetup() {
                     className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
                       formData.language === "ar"
                         ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                     }`}
                   >
                     Arabic
@@ -146,8 +146,8 @@ export default function InterviewSetup() {
 
               {/* Number of Questions */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Hash className="h-5 w-5 text-blue-600" />
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  <Hash className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   Number of Questions
                 </label>
                 <select
@@ -158,7 +158,7 @@ export default function InterviewSetup() {
                       num_questions: parseInt(e.target.value),
                     })
                   }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-gray-900 bg-white"
+                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 transition-all outline-none text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-900"
                 >
                   <option value={3}>3 Questions (Quick Practice)</option>
                   <option value={5}>5 Questions (Recommended)</option>
@@ -169,8 +169,8 @@ export default function InterviewSetup() {
 
               {/* Error Message */}
               {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-800 text-sm">{error}</p>
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>
                 </div>
               )}
 
@@ -182,7 +182,7 @@ export default function InterviewSetup() {
                 whileTap={{ scale: loading ? 1 : 0.98 }}
                 className={`w-full py-4 rounded-lg font-semibold text-lg shadow-xl transition-all duration-300 flex items-center justify-center gap-2 ${
                   loading || !formData.job_title
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed"
                     : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-2xl"
                 }`}
               >
@@ -203,27 +203,27 @@ export default function InterviewSetup() {
 
           {/* Info Cards */}
           <div className="grid md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-blue-100">
-              <p className="text-sm font-medium text-gray-700">
+            <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-blue-100 dark:border-blue-900">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 ✨ <strong>AI-Generated Questions</strong>
               </p>
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                 Questions tailored to your role and seniority
               </p>
             </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-blue-100">
-              <p className="text-sm font-medium text-gray-700">
+            <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-blue-100 dark:border-blue-900">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 📊 <strong>Instant Feedback</strong>
               </p>
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                 Detailed scoring and coaching after each answer
               </p>
             </div>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-blue-100">
-              <p className="text-sm font-medium text-gray-700">
+            <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-blue-100 dark:border-blue-900">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 📈 <strong>Comprehensive Report</strong>
               </p>
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                 Full analysis with action plan at the end
               </p>
             </div>

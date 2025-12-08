@@ -317,8 +317,23 @@ def complete_voice_interview(
                 "summary": session.summary_json
             }
         
-        # Store the transcript in the session
+        # Validate transcript data
+        if not request.transcript or len(request.transcript) == 0:
+            print(f"⚠️ Empty transcript received for session {session_id}")
+            # Still save empty transcript to mark session as attempted
+            session.transcript_json = []
+            session.status = "in_progress"
+            db.commit()
+            return {
+                "message": "Transcript saved (empty)",
+                "session_id": session_id,
+                "summary": None,
+                "warning": "No transcript data received. Interview may have been interrupted."
+            }
+        
+        # Store the transcript in the session (even if partial)
         session.transcript_json = request.transcript
+        print(f"💾 Saving transcript: {len(request.transcript)} messages, {request.questions_asked} questions asked")
         
         # Generate summary from voice transcript using LLM
         # Extract questions and answers from transcript
@@ -330,16 +345,47 @@ def complete_voice_interview(
         # Use LLM to analyze the conversation and generate report
         from app.services.llm_service import LLMService
         
-        summary_data = LLMService.summarize_voice_interview(
-            job_title=session.job_title,
-            seniority=session.seniority,
-            conversation_transcript=conversation_text,
-            questions_asked=request.questions_asked,
-            total_questions=session.num_questions
-        )
+        try:
+            summary_data = LLMService.summarize_voice_interview(
+                job_title=session.job_title,
+                seniority=session.seniority,
+                conversation_transcript=conversation_text,
+                questions_asked=request.questions_asked,
+                total_questions=session.num_questions
+            )
+        except Exception as llm_error:
+            # If LLM fails (e.g., quota exceeded), create a basic summary
+            print(f"⚠️ LLM summary generation failed: {llm_error}")
+            print(f"   Creating fallback summary from transcript...")
+            
+            # Create basic summary from transcript
+            user_messages = [t for t in request.transcript if t.get('role') == 'user']
+            assistant_messages = [t for t in request.transcript if t.get('role') == 'assistant']
+            
+            summary_data = {
+                "overall_score": 70,  # Default score
+                "strengths": [
+                    "Participated in the interview",
+                    "Provided responses to questions"
+                ] if len(user_messages) > 0 else ["Interview session started"],
+                "weaknesses": [
+                    "Interview was incomplete",
+                    "Limited data available for comprehensive evaluation"
+                ],
+                "action_plan": [
+                    "Complete a full interview session for better evaluation",
+                    "Answer all questions to receive detailed feedback"
+                ],
+                "suggested_roles": [session.job_title] if session.job_title else [],
+                "questions_completed": request.questions_asked,
+                "total_questions": session.num_questions,
+                "completion_status": "partial",
+                "note": "Report generated from partial transcript due to technical limitations"
+            }
         
-        # Add completion info
-        summary_data["questions_completed"] = request.questions_asked
+        # Add completion info (ensure questions_completed is set)
+        if "questions_completed" not in summary_data:
+            summary_data["questions_completed"] = request.questions_asked
         summary_data["total_questions"] = session.num_questions
         summary_data["completion_status"] = "completed" if request.questions_asked >= session.num_questions else "partial"
         
@@ -418,7 +464,10 @@ def get_or_generate_report(
     """
     Get or generate interview report at any time.
     Works even if interview was interrupted or incomplete.
+    Includes retry logic to handle race conditions when transcript is being saved.
     """
+    import time
+    
     # Validate session exists
     session = db.query(InterviewSession).filter(
         InterviewSession.id == session_id
@@ -427,8 +476,11 @@ def get_or_generate_report(
     if not session:
         raise HTTPException(status_code=404, detail="Interview session not found")
     
+    print(f"📊 Report request for session {session_id}")
+    
     # If already has a complete summary, return it
     if session.summary_json and session.status == "completed":
+        print(f"✅ Returning existing completed report")
         return {
             "session_id": session_id,
             "status": "completed",
@@ -437,30 +489,77 @@ def get_or_generate_report(
             "total_questions": session.num_questions
         }
     
-    # Get any existing transcript from session (for voice interviews)
-    transcript_data = session.transcript_json if hasattr(session, 'transcript_json') else None
+    # Retry logic: Check for transcript up to 3 times with exponential backoff
+    # This handles race conditions where frontend navigates before backend saves
+    transcript_data = None
+    max_retries = 3
+    retry_delay = 0.5  # Start with 500ms
     
-    if not transcript_data or len(transcript_data) == 0:
-        # No transcript yet - interview just started or no data
+    for attempt in range(1, max_retries + 1):
+        # Refresh session to get latest data from database
+        db.refresh(session)
+        
+        # Get transcript data
+        transcript_data = session.transcript_json if hasattr(session, 'transcript_json') else None
+        
+        print(f"   Attempt {attempt}/{max_retries}: Checking transcript...")
+        print(f"   - transcript_json exists: {transcript_data is not None}")
+        print(f"   - transcript length: {len(transcript_data) if transcript_data else 0}")
+        
+        # Lower threshold: Accept even 1 message (greeting counts as engagement)
+        # This allows reports for users who answered at least 1 question
+        has_transcript = transcript_data and len(transcript_data) >= 1
+        
+        if has_transcript:
+            print(f"✅ Found transcript with {len(transcript_data)} messages")
+            break  # Found transcript, exit retry loop
+        
+        if attempt < max_retries:
+            print(f"   ⏳ No transcript yet, waiting {retry_delay}s before retry...")
+            time.sleep(retry_delay)
+            retry_delay *= 2  # Exponential backoff: 0.5s, 1s, 2s
+    
+    # Final check after retries
+    if not transcript_data or len(transcript_data) < 1:
+        print(f"⚠️ No transcript found after {max_retries} attempts")
         return {
             "session_id": session_id,
             "status": "in_progress",
-            "message": "Interview in progress - not enough data yet for a report",
-            "summary": None
+            "message": "Interview in progress - not enough data yet for a report. Please answer at least one question.",
+            "summary": None,
+            "transcript_length": len(transcript_data) if transcript_data else 0,
+            "debug_info": {
+                "attempts": max_retries,
+                "transcript_exists": transcript_data is not None,
+                "transcript_length": len(transcript_data) if transcript_data else 0
+            }
         }
     
     # Generate report from whatever transcript we have
+    print(f"📝 Generating report from transcript...")
+    print(f"   - Transcript messages: {len(transcript_data)}")
+    
     conversation_text = "\n".join([
         f"{'Agent' if item.get('role') == 'assistant' else 'Candidate'}: {item.get('content', '')}"
         for item in transcript_data
     ])
     
-    # Count questions asked
+    # Count questions asked (agent messages, excluding greeting)
     questions_asked = len([t for t in transcript_data if t.get('role') == 'assistant']) // 2
+    # If we have at least 1 assistant message and 1 user message, count as 1 question
+    if len(transcript_data) >= 2:
+        assistant_messages = len([t for t in transcript_data if t.get('role') == 'assistant'])
+        user_messages = len([t for t in transcript_data if t.get('role') == 'user'])
+        if assistant_messages >= 1 and user_messages >= 1:
+            questions_asked = max(1, questions_asked)  # At least 1 question if we have Q&A
+    
+    print(f"   - Questions asked: {questions_asked}")
+    print(f"   - Total questions: {session.num_questions}")
     
     # Generate summary
     from app.services.llm_service import LLMService
     
+    print(f"🤖 Calling LLM to generate summary...")
     summary_data = LLMService.summarize_voice_interview(
         job_title=session.job_title,
         seniority=session.seniority,
@@ -468,6 +567,9 @@ def get_or_generate_report(
         questions_asked=questions_asked,
         total_questions=session.num_questions
     )
+    
+    print(f"✅ LLM summary generated")
+    print(f"   - Overall score: {summary_data.get('overall_score', 'N/A')}")
     
     # Add completion status to summary
     summary_data["questions_completed"] = questions_asked
@@ -483,6 +585,8 @@ def get_or_generate_report(
     
     db.commit()
     db.refresh(session)
+    
+    print(f"💾 Report saved to database")
     
     return {
         "session_id": session_id,

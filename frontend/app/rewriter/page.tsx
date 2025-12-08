@@ -144,7 +144,7 @@ export default function CVRewriter() {
   const currentStyle = styles.find(s => s.id === selectedStyle) || styles[0];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-pink-50 pt-20">
+    <main className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-pink-50 dark:from-gray-900 dark:via-orange-950 dark:to-pink-950 pt-20 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -157,16 +157,16 @@ export default function CVRewriter() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-amber-200 mb-6"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-full shadow-lg border border-amber-200 mb-6"
             >
               <Wand2 className="h-5 w-5 text-amber-600" />
-              <span className="text-sm font-semibold text-gray-700">GPT-4o Powered</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">GPT-4o Powered</span>
               <Sparkles className="h-4 w-4 text-amber-500" />
             </motion.div>
             <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-amber-600 via-orange-600 to-pink-600 bg-clip-text text-transparent">
               Elite CV Rewriter
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Transform your CV with AI in multiple professional styles. ATS-optimized and job-tailored.
             </p>
           </div>
@@ -180,17 +180,17 @@ export default function CVRewriter() {
               className="space-y-6"
             >
               {/* CV Input */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
+              <div className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
                 <div className="flex items-center gap-2 mb-6">
                   <FileText className="h-6 w-6 text-amber-600" />
-                  <h2 className="text-2xl font-bold text-gray-900">Your Current CV</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Your Current CV</h2>
                 </div>
                 
                 <textarea
                   value={cvText}
                   onChange={(e) => setCvText(e.target.value)}
                   placeholder="Paste your CV text here... (minimum 50 characters)&#10;&#10;Include your experience, skills, education, and achievements."
-                  className="w-full h-64 px-4 py-3 border-2 border-amber-200 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all outline-none text-gray-900 resize-none bg-white/50"
+                  className="w-full h-64 px-4 py-3 border-2 border-amber-200 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all outline-none text-gray-900 dark:text-gray-100 resize-none bg-white dark:bg-gray-800/50"
                 />
                 
                 <div className="flex items-center justify-between mt-2">
@@ -207,10 +207,10 @@ export default function CVRewriter() {
               </div>
 
               {/* Target Job (Optional) */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
+              <div className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
                 <div className="flex items-center gap-2 mb-4">
                   <Target className="h-5 w-5 text-amber-600" />
-                  <h3 className="text-lg font-bold text-gray-900">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                     Target Job (Optional but Recommended)
                   </h3>
                 </div>
@@ -220,18 +220,18 @@ export default function CVRewriter() {
                   value={targetJob}
                   onChange={(e) => setTargetJob(e.target.value)}
                   placeholder="e.g., Senior Software Engineer"
-                  className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all outline-none text-gray-900 mb-4 bg-white/50"
+                  className="w-full px-4 py-3 border-2 border-amber-200 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all outline-none text-gray-900 dark:text-gray-100 mb-4 bg-white dark:bg-gray-800/50"
                 />
                 
                 <textarea
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
                   placeholder="Paste job description here to tailor your CV for maximum impact..."
-                  className="w-full h-32 px-4 py-3 border-2 border-amber-200 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all outline-none text-gray-900 resize-none bg-white/50"
+                  className="w-full h-32 px-4 py-3 border-2 border-amber-200 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all outline-none text-gray-900 dark:text-gray-100 resize-none bg-white dark:bg-gray-800/50"
                 />
                 
                 <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <p className="text-xs text-gray-600 flex items-start gap-2">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-2">
                     <Zap className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
                     <span>
                       <strong>Pro Tip:</strong> Adding a job description helps AI tailor your CV with relevant keywords and experience highlights.
@@ -241,10 +241,10 @@ export default function CVRewriter() {
               </div>
 
               {/* Style Selection */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
+              <div className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
                 <div className="flex items-center gap-2 mb-6">
                   <Star className="h-6 w-6 text-amber-600" />
-                  <h3 className="text-lg font-bold text-gray-900">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                     Choose Your Style
                   </h3>
                 </div>
@@ -259,7 +259,7 @@ export default function CVRewriter() {
                       className={`p-5 rounded-xl border-2 transition-all duration-300 text-left relative overflow-hidden ${
                         selectedStyle === style.id
                           ? `border-amber-500 bg-gradient-to-br ${style.bgGradient} shadow-lg`
-                          : "border-gray-200 hover:border-amber-300 bg-white/50"
+                          : "border-gray-200 dark:border-gray-700 hover:border-amber-300 bg-white dark:bg-gray-800/50"
                       }`}
                     >
                       {selectedStyle === style.id && (
@@ -268,12 +268,12 @@ export default function CVRewriter() {
                         </div>
                       )}
                       <div className="text-3xl mb-3">{style.icon}</div>
-                      <div className={`font-bold text-gray-900 mb-1 ${
+                      <div className={`font-bold text-gray-900 dark:text-gray-100 mb-1 ${
                         selectedStyle === style.id ? 'text-lg' : 'text-base'
                       }`}>
                         {style.name}
                       </div>
-                      <div className="text-xs text-gray-600">{style.description}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">{style.description}</div>
                     </motion.button>
                   ))}
                 </div>
@@ -334,15 +334,15 @@ export default function CVRewriter() {
                   className="space-y-6"
                 >
                   {/* ATS Score Improvement */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
+                  <div className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
                     <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center gap-2">
                         <Award className="h-6 w-6 text-amber-600" />
-                        <h2 className="text-2xl font-bold text-gray-900">Performance Boost</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Performance Boost</h2>
                       </div>
                       <button
                         onClick={() => setResult(null)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                        className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors p-2 hover:bg-gray-100 dark:bg-gray-700 rounded-lg"
                       >
                         <X className="h-5 w-5" />
                       </button>
@@ -350,8 +350,8 @@ export default function CVRewriter() {
 
                     <div className="grid grid-cols-2 gap-6 mb-6">
                       <div className="p-5 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl border-2 border-gray-300">
-                        <div className="text-sm font-medium text-gray-600 mb-2">Before</div>
-                        <div className="text-4xl font-bold text-gray-700">
+                        <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Before</div>
+                        <div className="text-4xl font-bold text-gray-700 dark:text-gray-300">
                           {result.ats_score_before}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">ATS Score</div>
@@ -375,7 +375,7 @@ export default function CVRewriter() {
 
                   {/* Improvements */}
                   {result.improvements_made && result.improvements_made.length > 0 && (
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
+                    <div className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
                       <h3 className="text-xl font-bold mb-5 flex items-center gap-2 text-purple-600">
                         <Sparkles className="h-6 w-6" />
                         AI Improvements Made
@@ -390,7 +390,7 @@ export default function CVRewriter() {
                             className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg border border-purple-100"
                           >
                             <CheckCircle2 className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                            <span className="text-gray-700">{improvement}</span>
+                            <span className="text-gray-700 dark:text-gray-300">{improvement}</span>
                           </motion.li>
                         ))}
                       </ul>
@@ -399,7 +399,7 @@ export default function CVRewriter() {
 
                   {/* Keywords Added */}
                   {result.keywords_added && result.keywords_added.length > 0 && (
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
+                    <div className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
                       <h3 className="text-xl font-bold mb-4 text-pink-600 flex items-center gap-2">
                         <Target className="h-6 w-6" />
                         Keywords Added
@@ -421,9 +421,9 @@ export default function CVRewriter() {
                   )}
 
                   {/* Rewritten CV */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
+                  <div className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-amber-100">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                         <FileText className="h-6 w-6 text-amber-600" />
                         Your Transformed CV
                       </h3>
@@ -454,14 +454,14 @@ export default function CVRewriter() {
                       </div>
                     </div>
                     
-                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 max-h-[500px] overflow-y-auto border-2 border-gray-200">
+                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 max-h-[500px] overflow-y-auto border-2 border-gray-200 dark:border-gray-700">
                       <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono leading-relaxed">
                         {result.rewritten_cv_text}
                       </pre>
                     </div>
 
                     <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
-                      <p className="text-sm text-gray-700 flex items-start gap-2">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
                         <Sparkles className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         <span>
                           <strong>Next Steps:</strong> Use this CV for your applications! You can also try different styles or add more job details for even better results.
@@ -476,7 +476,7 @@ export default function CVRewriter() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="bg-white/60 backdrop-blur-sm rounded-2xl border-2 border-dashed border-amber-300 p-12 flex flex-col items-center justify-center text-center min-h-[600px]"
+                  className="bg-white dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl border-2 border-dashed border-amber-300 p-12 flex flex-col items-center justify-center text-center min-h-[600px]"
                 >
                   <motion.div
                     animate={{ 
@@ -491,7 +491,7 @@ export default function CVRewriter() {
                   >
                     <Wand2 className="h-32 w-32 text-amber-300 mb-6" />
                   </motion.div>
-                  <h3 className="text-2xl font-bold text-gray-700 mb-3">
+                  <h3 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-3">
                     Ready to Transform?
                   </h3>
                   <p className="text-gray-500 max-w-md mb-6">
@@ -499,13 +499,13 @@ export default function CVRewriter() {
                     create a professional, ATS-optimized version in seconds.
                   </p>
                   <div className="flex flex-wrap gap-3 justify-center">
-                    <span className="px-4 py-2 bg-white rounded-full text-sm font-medium text-gray-600 shadow-md">
+                    <span className="px-4 py-2 bg-white dark:bg-gray-800 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 shadow-md">
                       ✨ 4 Professional Styles
                     </span>
-                    <span className="px-4 py-2 bg-white rounded-full text-sm font-medium text-gray-600 shadow-md">
+                    <span className="px-4 py-2 bg-white dark:bg-gray-800 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 shadow-md">
                       🎯 ATS Optimized
                     </span>
-                    <span className="px-4 py-2 bg-white rounded-full text-sm font-medium text-gray-600 shadow-md">
+                    <span className="px-4 py-2 bg-white dark:bg-gray-800 rounded-full text-sm font-medium text-gray-600 dark:text-gray-400 shadow-md">
                       ⚡ Instant Results
                     </span>
                   </div>

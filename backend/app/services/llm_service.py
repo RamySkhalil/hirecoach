@@ -537,12 +537,25 @@ Be specific, constructive, and encouraging."""
         Generate a comprehensive summary of a voice/conversational interview session.
         
         This analyzes the full conversation transcript from a LiveKit voice interview.
+        Works even with minimal transcripts (1 question answered).
         """
+        print(f"🤖 LLM Service: Generating summary for interview")
+        print(f"   - Job: {seniority} {job_title}")
+        print(f"   - Questions: {questions_asked}/{total_questions}")
+        print(f"   - Transcript length: {len(conversation_transcript)} characters")
+        
+        # Handle very short transcripts (minimal conversation)
+        is_minimal = questions_asked < 2 or len(conversation_transcript) < 200
+        
+        if is_minimal:
+            print(f"   ⚠️ Minimal transcript detected - will provide basic analysis")
+        
         prompt = f"""You are an expert career coach reviewing a voice mock interview.
 
 Job: {seniority} {job_title}
 Questions Asked: {questions_asked}/{total_questions}
 {"⚠️ INTERVIEW PARTIALLY COMPLETED - Candidate left early" if questions_asked < total_questions else "✅ INTERVIEW FULLY COMPLETED"}
+{"⚠️ NOTE: This is a minimal transcript (very short conversation). Provide analysis based on what was demonstrated." if is_minimal else ""}
 
 Full Interview Conversation:
 {conversation_transcript}
@@ -597,17 +610,29 @@ If the interview was incomplete, be honest but supportive about the need to comp
             {"role": "user", "content": prompt}
         ]
         
+        print(f"   📤 Calling LLM API...")
         response = LLMService._call_llm(messages, response_format="json")
         
         if response:
             try:
+                print(f"   📥 LLM response received, parsing JSON...")
                 summary = json.loads(response)
                 if all(key in summary for key in ["overall_score", "strengths", "weaknesses", "action_plan", "suggested_roles"]):
+                    print(f"   ✅ LLM summary parsed successfully")
+                    print(f"      - Overall score: {summary.get('overall_score', 'N/A')}")
+                    print(f"      - Strengths: {len(summary.get('strengths', []))} items")
+                    print(f"      - Weaknesses: {len(summary.get('weaknesses', []))} items")
                     return summary
-            except json.JSONDecodeError:
-                print("Failed to parse LLM summary as JSON")
+                else:
+                    print(f"   ⚠️ LLM response missing required keys")
+            except json.JSONDecodeError as e:
+                print(f"   ❌ Failed to parse LLM summary as JSON: {e}")
+                print(f"   Response preview: {response[:200]}...")
+        else:
+            print(f"   ⚠️ No response from LLM, using fallback")
         
         # Fall back to a basic summary
+        print(f"   📋 Using fallback summary")
         return {
             "overall_score": 75,
             "strengths": [

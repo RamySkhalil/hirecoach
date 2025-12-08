@@ -190,7 +190,7 @@ export default function CareerAgent() {
   ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-20">
+    <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-indigo-950 dark:to-purple-950 pt-20 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Header */}
         <motion.div
@@ -198,15 +198,15 @@ export default function CareerAgent() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-indigo-200 mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-full shadow-lg border border-indigo-200 mb-6">
             <Bot className="h-5 w-5 text-indigo-600" />
-            <span className="text-sm font-semibold text-gray-700">GPT-4o Powered</span>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">GPT-4o Powered</span>
             <Sparkles className="h-4 w-4 text-indigo-500" />
           </div>
           <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
             AI Career Coach
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             Your personal AI mentor for career growth, job search, and professional development
           </p>
         </motion.div>
@@ -218,13 +218,13 @@ export default function CareerAgent() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-indigo-100 overflow-hidden"
+              className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-indigo-100 overflow-hidden"
               style={{ height: "calc(100vh - 240px)", minHeight: "600px" }}
             >
               {/* Chat Header */}
               <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
+                  <div className="p-2 bg-white dark:bg-gray-800/20 rounded-lg">
                     <Bot className="h-6 w-6" />
                   </div>
                   <div>
@@ -266,7 +266,7 @@ export default function CareerAgent() {
                         <div
                           className={`inline-block px-5 py-3 rounded-2xl ${
                             message.role === "assistant"
-                              ? "bg-gradient-to-br from-indigo-50 to-purple-50 text-gray-900 border border-indigo-100"
+                              ? "bg-gradient-to-br from-indigo-50 to-purple-50 text-gray-900 dark:text-gray-100 border border-indigo-100"
                               : "bg-gradient-to-r from-pink-600 to-rose-600 text-white"
                           }`}
                         >
@@ -279,7 +279,7 @@ export default function CareerAgent() {
                             {message.suggestions.map((suggestion, idx) => (
                               <div
                                 key={idx}
-                                className="inline-flex items-start gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg text-sm text-gray-700"
+                                className="inline-flex items-start gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg text-sm text-gray-700 dark:text-gray-300"
                               >
                                 <Lightbulb className="h-4 w-4 text-purple-600 flex-shrink-0 mt-0.5" />
                                 <span>{suggestion}</span>
@@ -294,7 +294,7 @@ export default function CareerAgent() {
                             {message.action_items.map((action, idx) => (
                               <div
                                 key={idx}
-                                className="inline-flex items-start gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-gray-700"
+                                className="inline-flex items-start gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-gray-700 dark:text-gray-300"
                               >
                                 <Target className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                                 <span>{action}</span>
@@ -338,7 +338,7 @@ export default function CareerAgent() {
                     onKeyPress={handleKeyPress}
                     placeholder="Ask me anything about your career..."
                     disabled={loading}
-                    className="flex-1 px-4 py-3 border-2 border-indigo-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed resize-none bg-white"
+                    className="flex-1 px-4 py-3 border-2 border-indigo-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none disabled:bg-gray-100 dark:bg-gray-700 disabled:cursor-not-allowed resize-none bg-white dark:bg-gray-800"
                     rows={2}
                   />
                   <motion.button
@@ -371,9 +371,9 @@ export default function CareerAgent() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-indigo-100"
+              className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-indigo-100"
             >
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                 <Zap className="h-5 w-5 text-indigo-600" />
                 Quick Tips
               </h3>
@@ -387,7 +387,7 @@ export default function CareerAgent() {
                     className={`p-4 rounded-xl border-2 border-${tip.color}-200 bg-gradient-to-br ${tip.gradient} bg-opacity-10 hover:shadow-lg transition-all text-left`}
                   >
                     <tip.icon className={`h-6 w-6 text-${tip.color}-600 mb-2`} />
-                    <div className="text-sm font-semibold text-gray-900">{tip.title}</div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tip.title}</div>
                   </motion.button>
                 ))}
               </div>
@@ -398,9 +398,9 @@ export default function CareerAgent() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-indigo-100"
+              className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-indigo-100"
             >
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-indigo-600" />
                 Try Asking
               </h3>
@@ -411,7 +411,7 @@ export default function CareerAgent() {
                     onClick={() => handleSend(prompt)}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full text-left px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border border-indigo-200 rounded-lg text-sm text-gray-700 transition-all"
+                    className="w-full text-left px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border border-indigo-200 rounded-lg text-sm text-gray-700 dark:text-gray-300 transition-all"
                   >
                     {prompt}
                   </motion.button>
@@ -426,7 +426,7 @@ export default function CareerAgent() {
               transition={{ delay: 0.5 }}
               className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl shadow-xl p-6 border-2 border-indigo-200"
             >
-              <h3 className="text-lg font-bold text-gray-900 mb-4">What I Can Help With</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">What I Can Help With</h3>
               <div className="space-y-3">
                 {[
                   { icon: Briefcase, text: "Career path guidance" },
@@ -435,7 +435,7 @@ export default function CareerAgent() {
                   { icon: Target, text: "Interview preparation" },
                   { icon: BookOpen, text: "Resume optimization" },
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3 text-sm text-gray-700">
+                  <div key={idx} className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
                     <item.icon className="h-5 w-5 text-indigo-600" />
                     <span>{item.text}</span>
                   </div>

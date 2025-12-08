@@ -44,6 +44,7 @@ export default function InterviewSession() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
 
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -133,6 +134,15 @@ export default function InterviewSession() {
         
         // Connect to the room with the token
         await roomInstance.connect(data.url, data.token);
+        
+        // Listen for room disconnection (when agent ends interview)
+        roomInstance.on('disconnected', () => {
+          console.log('🔚 Room disconnected - redirecting to report...');
+          // Small delay to ensure backend saves the transcript
+          setTimeout(() => {
+            router.push(`/interview/report/${sessionId}`);
+          }, 1000);
+        });
         
         // Listen for transcription text streams (only register once per room instance)
         if (!transcriptionHandlerRegistered.current) {
@@ -240,11 +250,75 @@ export default function InterviewSession() {
     };
   }, [sessionId, router, getToken, user, roomInstance]);
 
-  const handleLeaveInterview = () => {
-    // Disconnect from LiveKit
-    roomInstance.disconnect();
-    // Navigate to report page
-    router.push(`/interview/report/${sessionId}`);
+  const handleLeaveInterview = async () => {
+    console.log('👋 Leaving interview - saving progress...');
+    setLeaving(true);
+    
+    try {
+      // Disconnect from LiveKit - this triggers backend save
+      roomInstance.disconnect();
+      console.log('⏳ Disconnected from LiveKit, waiting for transcript to save...');
+      
+      // Poll the report endpoint to check if transcript is saved and report is ready
+      const maxAttempts = 10; // Try for up to 5 seconds (10 * 500ms)
+      const pollInterval = 500; // Check every 500ms
+      let reportReady = false;
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const token = await getToken();
+      
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        console.log(`   Polling attempt ${attempt}/${maxAttempts}...`);
+        
+        try {
+          const response = await fetch(
+            `${apiUrl}/interview/session/${sessionId}/report`,
+            {
+              headers: token ? { Authorization: `Bearer ${token}` } : {}
+            }
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Check if report is ready (has summary)
+            if (data.summary) {
+              console.log('✅ Report is ready!');
+              reportReady = true;
+              break;
+            } else if (data.transcript_length && data.transcript_length > 0) {
+              console.log(`   Transcript exists (${data.transcript_length} messages), but report not generated yet...`);
+              // Continue polling - report might be generating
+            } else {
+              console.log(`   No transcript yet (attempt ${attempt}/${maxAttempts})...`);
+            }
+          } else {
+            console.log(`   Report endpoint returned ${response.status}, continuing to poll...`);
+          }
+        } catch (error) {
+          console.log(`   Polling error (attempt ${attempt}):`, error);
+          // Continue polling
+        }
+        
+        // Wait before next attempt (except on last attempt)
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+      }
+      
+      if (reportReady) {
+        console.log('📊 Report ready, navigating to report page...');
+      } else {
+        console.log('⚠️ Report not ready after polling, navigating anyway (report page will handle it)...');
+      }
+      
+      // Navigate to report page (it will handle retry logic if needed)
+      router.push(`/interview/report/${sessionId}`);
+    } catch (error) {
+      console.error('❌ Error leaving interview:', error);
+      // Navigate anyway - report page will handle the error
+      router.push(`/interview/report/${sessionId}`);
+    }
   };
 
   if (loading) {
@@ -290,12 +364,26 @@ export default function InterviewSession() {
                 </span>
                 <motion.button
                   onClick={handleLeaveInterview}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg text-sm"
+                  disabled={leaving}
+                  whileHover={{ scale: leaving ? 1 : 1.05 }}
+                  whileTap={{ scale: leaving ? 1 : 0.95 }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all shadow-md hover:shadow-lg text-sm ${
+                    leaving 
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
                 >
-                  <LogOut className="h-4 w-4" />
-                  Leave & Get Report
+                  {leaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="h-4 w-4" />
+                      Leave & Get Report
+                    </>
+                  )}
                 </motion.button>
               </div>
             </div>
