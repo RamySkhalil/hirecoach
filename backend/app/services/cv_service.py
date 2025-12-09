@@ -238,12 +238,17 @@ class CVService:
                         "1. overall_score (0-100): Overall resume quality\n"
                         "2. ats_score (0-100): ATS compatibility score\n"
                         "3. scores_breakdown: {content, formatting, keywords, experience, skills} each 0-100\n"
-                        "4. strengths: List of 3-5 strong points\n"
-                        "5. weaknesses: List of 3-5 areas for improvement\n"
-                        "6. suggestions: List of 5-7 specific actionable improvements\n"
+                        "4. strengths: List of 3-5 strong points about the candidate's profile\n"
+                        "5. weaknesses: List of 3-5 areas where the candidate needs improvement\n"
+                        "6. suggestions: List of 5-7 specific actionable improvements. Include:\n"
+                        "   - CV formatting improvements (structure, clarity, presentation)\n"
+                        "   - Career development recommendations (certifications to pursue, courses to take, skills to develop)\n"
+                        "   - Experience gaps to fill (types of projects, roles, or experiences to gain)\n"
+                        "   - Educational recommendations if applicable\n"
+                        "   Mix CV improvements with career growth advice.\n"
                         "7. keywords_found: Relevant keywords present\n"
                         "8. keywords_missing: Important keywords missing for the role\n"
-                        "Be specific, constructive, and actionable in your feedback."
+                        "Be specific, constructive, and actionable. Focus on both CV quality AND candidate career development."
                     )
                 }
             ]

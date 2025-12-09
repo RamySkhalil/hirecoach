@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     r2_account_id: Optional[str] = None
     r2_access_key_id: Optional[str] = None
     r2_secret_access_key: Optional[str] = None
-    r2_endpoint_url: Optional[str] = None
-    r2_public_url: Optional[str] = None  # Custom domain/CDN URL
+    r2_endpoint_url: Optional[str] = None  # e.g., https://<account-id>.r2.cloudflarestorage.com (without bucket name)
+    r2_public_url: Optional[str] = None  # Custom domain/CDN URL (deprecated, not used for private storage)
     
     # App settings
     app_name: str = "Interviewly"

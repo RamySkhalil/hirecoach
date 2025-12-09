@@ -51,6 +51,10 @@ class JobResponse(BaseModel):
     company_name: Optional[str]
     created_at: datetime
     applications_count: int = 0
+    is_active: bool = True
+    min_salary: Optional[float] = None
+    max_salary: Optional[float] = None
+    currency: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -73,13 +77,18 @@ class ApplicationResponse(BaseModel):
     candidate_name: str
     candidate_email: str
     candidate_location: Optional[str] = None
-    resume_url: Optional[str] = None
+    resume_url: Optional[str] = None  # DEPRECATED: Kept for backward compatibility, will be None for new uploads
     status: str
     fit_score: Optional[float]
     applied_at: datetime
     
     class Config:
         from_attributes = True
+
+
+class CVUrlResponse(BaseModel):
+    """Response model for presigned CV URL."""
+    url: str
 
 
 class CreateInterviewRequest(BaseModel):
@@ -183,7 +192,8 @@ async def create_job(
         max_salary=request.max_salary,
         currency=request.currency,
         created_by_user_id=user.id,
-        status=JobStatus.OPEN  # Set to OPEN so candidates can apply
+        status=JobStatus.OPEN,  # Set to OPEN so candidates can apply
+        is_active=True  # Default to active
     )
     db.add(job)
     db.commit()
@@ -201,19 +211,36 @@ async def create_job(
         applications_count=0,
         min_salary=job.min_salary,
         max_salary=job.max_salary,
-        currency=job.currency
+        currency=job.currency,
+        is_active=job.is_active if hasattr(job, 'is_active') else True
     )
 
 
 @router.get("/jobs", response_model=List[JobResponse])
 async def list_jobs(
+    search: Optional[str] = None,
+    filter_status: Optional[str] = None,  # "all", "active", "inactive"
     user: User = Depends(require_role(UserRole.RECRUITER)),
     db: Session = Depends(get_db)
 ):
     """
     List all jobs created by the current recruiter.
+    Supports search by title and filter by active/inactive status.
     """
-    jobs = db.query(Job).filter(Job.created_by_user_id == user.id).all()
+    query = db.query(Job).filter(Job.created_by_user_id == user.id)
+    
+    # Search by title
+    if search:
+        query = query.filter(Job.title.ilike(f"%{search}%"))
+    
+    # Filter by active/inactive
+    if filter_status == "active":
+        query = query.filter(Job.is_active == True)
+    elif filter_status == "inactive":
+        query = query.filter(Job.is_active == False)
+    # "all" or None means no filter
+    
+    jobs = query.all()
     
     result = []
     for job in jobs:
@@ -232,7 +259,8 @@ async def list_jobs(
             applications_count=apps_count,
             min_salary=job.min_salary,
             max_salary=job.max_salary,
-            currency=job.currency
+            currency=job.currency,
+            is_active=job.is_active if hasattr(job, 'is_active') else True
         ))
     
     return result
@@ -266,7 +294,8 @@ async def get_job(
         applications_count=apps_count,
         min_salary=job.min_salary,
         max_salary=job.max_salary,
-        currency=job.currency
+        currency=job.currency,
+        is_active=job.is_active if hasattr(job, 'is_active') else True
     )
 
 
@@ -277,9 +306,13 @@ async def get_job_public(
 ):
     """
     Get a job by ID for public viewing (no auth required).
-    Only returns jobs with status OPEN.
+    Only returns jobs with status OPEN and is_active=True.
     """
-    job = db.query(Job).filter(Job.id == job_id, Job.status == JobStatus.OPEN).first()
+    job = db.query(Job).filter(
+        Job.id == job_id, 
+        Job.status == JobStatus.OPEN,
+        Job.is_active == True
+    ).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found or no longer accepting applications")
     
@@ -298,7 +331,46 @@ async def get_job_public(
         applications_count=0,  # Don't show count to public
         min_salary=job.min_salary,
         max_salary=job.max_salary,
-        currency=job.currency
+        currency=job.currency,
+        is_active=job.is_active if hasattr(job, 'is_active') else True
+    )
+
+
+@router.patch("/jobs/{job_id}/toggle-active", response_model=JobResponse)
+async def toggle_job_active(
+    job_id: str,
+    user: User = Depends(require_role(UserRole.RECRUITER)),
+    db: Session = Depends(get_db)
+):
+    """
+    Toggle the active status of a job (activate/deactivate ad).
+    """
+    job = db.query(Job).filter(Job.id == job_id, Job.created_by_user_id == user.id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Toggle is_active
+    job.is_active = not job.is_active
+    db.commit()
+    db.refresh(job)
+    
+    company = db.query(Company).filter(Company.id == job.company_id).first() if job.company_id else None
+    apps_count = db.query(func.count(Application.id)).filter(Application.job_id == job.id).scalar() or 0
+    
+    return JobResponse(
+        id=str(job.id),
+        title=job.title,
+        location=job.location,
+        employment_type=job.employment_type.value if job.employment_type else None,
+        description=job.description,
+        status=job.status.value,
+        company_name=company.name if company else None,
+        created_at=job.created_at,
+        applications_count=apps_count,
+        min_salary=job.min_salary,
+        max_salary=job.max_salary,
+        currency=job.currency,
+        is_active=job.is_active
     )
 
 
@@ -322,13 +394,17 @@ async def apply_to_job(
     
     If both are provided, resume_file takes precedence.
     """
-    # Check job exists
-    job = db.query(Job).filter(Job.id == job_id, Job.status == JobStatus.OPEN).first()
+    # Check job exists and is active
+    job = db.query(Job).filter(
+        Job.id == job_id, 
+        Job.status == JobStatus.OPEN,
+        Job.is_active == True
+    ).first()
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found or not open")
+        raise HTTPException(status_code=404, detail="Job not found or not accepting applications")
     
     # Handle file upload if provided
-    final_resume_url = resume_url
+    resume_key = None
     
     if resume_file:
         r2_service = get_r2_service()
@@ -346,11 +422,11 @@ async def apply_to_job(
         if not is_valid:
             raise HTTPException(status_code=400, detail=error_msg)
         
-        # Upload to R2
+        # Upload to R2 - returns object key, not URL
         try:
             from io import BytesIO
             file_obj = BytesIO(file_content)
-            final_resume_url = r2_service.upload_file(
+            resume_key = r2_service.upload_file(
                 file_obj,
                 resume_file.filename or "resume",
                 folder="Applicants"
@@ -360,6 +436,14 @@ async def apply_to_job(
                 status_code=500,
                 detail=f"Failed to upload resume: {str(e)}"
             )
+    elif resume_url:
+        # Legacy support: if URL is provided, try to extract key
+        # This handles old data or manual entries
+        import re
+        if "Applicants/" in resume_url:
+            match = re.search(r'Applicants/[^/?]+', resume_url)
+            if match:
+                resume_key = match.group(0)
     
     # Get or create candidate
     candidate = db.query(Candidate).filter(Candidate.email == candidate_email).first()
@@ -369,15 +453,15 @@ async def apply_to_job(
             email=candidate_email,
             phone=candidate_phone,
             location=candidate_location,
-            resume_url=final_resume_url
+            resume_key=resume_key
         )
         db.add(candidate)
         db.commit()
         db.refresh(candidate)
     else:
         # Update candidate info if needed
-        if final_resume_url and not candidate.resume_url:
-            candidate.resume_url = final_resume_url
+        if resume_key and not candidate.resume_key:
+            candidate.resume_key = resume_key
         if candidate_location and not candidate.location:
             candidate.location = candidate_location
         if candidate_phone and not candidate.phone:
@@ -417,7 +501,7 @@ async def apply_to_job(
         candidate_name=candidate.full_name,
         candidate_email=candidate.email,
         candidate_location=candidate.location,
-        resume_url=candidate.resume_url,
+        resume_url=None,  # No longer returned - use /cv endpoint instead
         status=application.status.value,
         fit_score=application.fit_score,
         applied_at=application.applied_at
@@ -450,13 +534,92 @@ async def get_job_applications(
             candidate_name=candidate.full_name if candidate else "Unknown",
             candidate_email=candidate.email if candidate else "",
             candidate_location=candidate.location if candidate else None,
-            resume_url=candidate.resume_url if candidate else None,
+            resume_url=None,  # No longer returned - use /cv endpoint instead
             status=app.status.value,
             fit_score=app.fit_score,
             applied_at=app.applied_at
         ))
     
     return result
+
+
+@router.get("/applications/{application_id}/cv", response_model=CVUrlResponse)
+async def get_application_cv(
+    application_id: str,
+    user: User = Depends(require_role(UserRole.RECRUITER)),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a presigned URL to access an application's CV.
+    
+    This endpoint:
+    - Authenticates the user (must be RECRUITER)
+    - Authorizes access to the application (must own the job)
+    - Generates a short-lived presigned URL (10 minutes) for the CV
+    - Returns the URL for frontend to open
+    
+    Security:
+    - CVs are stored privately in R2
+    - Only accessible via presigned URLs after authorization
+    - URLs expire after 10 minutes
+    """
+    # Load application
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    
+    # Authorize: verify user owns the job for this application
+    job = db.query(Job).filter(
+        Job.id == application.job_id,
+        Job.created_by_user_id == user.id
+    ).first()
+    if not job:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to access this application's CV"
+        )
+    
+    # Get candidate and check for CV
+    candidate = db.query(Candidate).filter(Candidate.id == application.candidate_id).first()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    # Check if candidate has a CV (prefer resume_key, fallback to resume_url for legacy)
+    cv_key = candidate.resume_key
+    if not cv_key and candidate.resume_url:
+        # Legacy: try to extract key from URL
+        import re
+        if "Applicants/" in candidate.resume_url:
+            match = re.search(r'Applicants/[^/?]+', candidate.resume_url)
+            if match:
+                cv_key = match.group(0)
+    
+    if not cv_key:
+        raise HTTPException(
+            status_code=404,
+            detail="CV not found for this application"
+        )
+    
+    # Generate presigned URL
+    r2_service = get_r2_service()
+    if not r2_service:
+        raise HTTPException(
+            status_code=503,
+            detail="File storage service is not configured"
+        )
+    
+    try:
+        # Generate presigned URL valid for 10 minutes (600 seconds)
+        presigned_url = r2_service.generate_presigned_cv_url(
+            object_key=cv_key,
+            expires_in_seconds=600
+        )
+        return CVUrlResponse(url=presigned_url)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate CV access URL: {str(e)}"
+        )
 
 
 # ============================================================================

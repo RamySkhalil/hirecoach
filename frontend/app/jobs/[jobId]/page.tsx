@@ -70,7 +70,9 @@ export default function PublicJobPage() {
 
       if (!response.ok) {
         if (response.status === 404) {
-          setError("Job not found or no longer accepting applications");
+          // Check if it's an inactive ad or truly not found
+          // We'll show a professional inactive message
+          setError("inactive");
         } else {
           const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
           setError(errorData.detail || `Failed to load job (${response.status})`);
@@ -206,6 +208,41 @@ export default function PublicJobPage() {
   }
 
   if (error && !job) {
+    // Show professional inactive message
+    if (error === "inactive") {
+      return (
+        <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-12"
+          >
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 mb-6">
+              <Briefcase className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              This Job Ad is Currently Inactive
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-2 text-lg">
+              The recruiter has temporarily deactivated this job posting.
+            </p>
+            <p className="text-gray-500 dark:text-gray-500 mb-8 text-sm">
+              Please check back later or explore other opportunities.
+            </p>
+            <Link href="/">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                Browse Other Opportunities
+              </motion.button>
+            </Link>
+          </motion.div>
+        </main>
+      );
+    }
+    
     return (
       <main className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center p-6">
         <div className="text-center max-w-md">

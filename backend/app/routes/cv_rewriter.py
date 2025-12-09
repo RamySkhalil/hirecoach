@@ -3,6 +3,7 @@ CV Rewriter and Cover Letter Generator endpoints.
 """
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from datetime import datetime
 
 from app.db import get_db
@@ -43,14 +44,31 @@ def rewrite_cv(
     db.commit()
     db.refresh(cv_rewrite)
     
+    # Store the ID before the long operation
+    cv_rewrite_id = cv_rewrite.id
+    
     try:
-        # Generate rewritten CV
+        # Generate rewritten CV (this is a long-running operation)
         result = CVRewriterService.rewrite_cv(
             cv_text=request.cv_text,
             style=request.style,
             target_job_title=request.target_job_title,
             target_job_description=request.target_job_description
         )
+        
+        # After long operation, refresh the connection and re-query the object
+        # This ensures we have a fresh connection and object
+        try:
+            # Test connection is alive
+            db.execute(text("SELECT 1"))
+        except Exception:
+            # Connection is dead, rollback and re-query
+            db.rollback()
+        
+        # Re-query the object to ensure it's attached to a fresh session
+        cv_rewrite = db.query(CVRewrite).filter(CVRewrite.id == cv_rewrite_id).first()
+        if not cv_rewrite:
+            raise HTTPException(status_code=500, detail="CV rewrite record not found after processing")
         
         # Update record with results
         cv_rewrite.rewritten_cv_text = result.get("rewritten_cv_text")
@@ -62,30 +80,62 @@ def rewrite_cv(
         cv_rewrite.status = "completed"
         cv_rewrite.completed_at = datetime.utcnow()
         
-        db.commit()
-        db.refresh(cv_rewrite)
+        try:
+            db.commit()
+            db.refresh(cv_rewrite)
+        except Exception as db_error:
+            db.rollback()
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Database error while saving results: {str(db_error)}"
+            )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-        cv_rewrite.status = "failed"
-        cv_rewrite.error_message = str(e)
-        db.commit()
-        db.refresh(cv_rewrite)
+        # Handle any other errors
+        try:
+            db.rollback()
+            # Re-query the object to ensure it's attached to the session
+            cv_rewrite = db.query(CVRewrite).filter(CVRewrite.id == cv_rewrite.id).first()
+            if cv_rewrite:
+                cv_rewrite.status = "failed"
+                cv_rewrite.error_message = str(e)
+                db.commit()
+        except Exception as db_error:
+            # If rollback/commit fails, log but don't fail again
+            print(f"Error updating CV rewrite status: {db_error}")
+        
         raise HTTPException(status_code=500, detail=f"CV rewrite failed: {str(e)}")
     
-    return CVRewriteResponse(
-        id=cv_rewrite.id,
-        original_cv_text=cv_rewrite.original_cv_text,
-        rewritten_cv_text=cv_rewrite.rewritten_cv_text,
-        rewritten_cv_markdown=cv_rewrite.rewritten_cv_markdown,
-        style=cv_rewrite.style.value,
-        improvements_made=cv_rewrite.improvements_made,
-        keywords_added=cv_rewrite.keywords_added,
-        ats_score_before=cv_rewrite.ats_score_before,
-        ats_score_after=cv_rewrite.ats_score_after,
-        status=cv_rewrite.status,
-        created_at=cv_rewrite.created_at,
-        completed_at=cv_rewrite.completed_at
-    )
+    # Re-query to ensure object is fresh and attached to session
+    try:
+        cv_rewrite = db.query(CVRewrite).filter(CVRewrite.id == cv_rewrite.id).first()
+        if not cv_rewrite:
+            raise HTTPException(status_code=500, detail="CV rewrite record not found after completion")
+        
+        # Build response safely
+        return CVRewriteResponse(
+            id=cv_rewrite.id,
+            original_cv_text=cv_rewrite.original_cv_text,
+            rewritten_cv_text=cv_rewrite.rewritten_cv_text,
+            rewritten_cv_markdown=cv_rewrite.rewritten_cv_markdown,
+            style=cv_rewrite.style.value if cv_rewrite.style else "modern",
+            improvements_made=cv_rewrite.improvements_made or [],
+            keywords_added=cv_rewrite.keywords_added or [],
+            ats_score_before=cv_rewrite.ats_score_before,
+            ats_score_after=cv_rewrite.ats_score_after,
+            status=cv_rewrite.status,
+            created_at=cv_rewrite.created_at,
+            completed_at=cv_rewrite.completed_at
+        )
+    except Exception as e:
+        # If response creation fails, log and return error
+        print(f"Error creating CV rewrite response: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error creating response: {str(e)}")
 
 
 @router.get("/cv/{rewrite_id}", response_model=CVRewriteResponse)
@@ -143,8 +193,11 @@ def generate_cover_letter(
     db.commit()
     db.refresh(cover_letter)
     
+    # Store the ID before the long operation
+    cover_letter_id = cover_letter.id
+    
     try:
-        # Generate cover letter
+        # Generate cover letter (this is a long-running operation)
         result = CoverLetterService.generate_cover_letter(
             cv_text=request.cv_text,
             job_title=request.job_title,
@@ -154,6 +207,20 @@ def generate_cover_letter(
             additional_info=request.additional_info
         )
         
+        # After long operation, refresh the connection and re-query the object
+        # This ensures we have a fresh connection and object
+        try:
+            # Test connection is alive
+            db.execute(text("SELECT 1"))
+        except Exception:
+            # Connection is dead, rollback and re-query
+            db.rollback()
+        
+        # Re-query the object to ensure it's attached to a fresh session
+        cover_letter = db.query(CoverLetter).filter(CoverLetter.id == cover_letter_id).first()
+        if not cover_letter:
+            raise HTTPException(status_code=500, detail="Cover letter record not found after processing")
+        
         # Update record with results
         cover_letter.cover_letter_text = result.get("cover_letter_text")
         cover_letter.cover_letter_markdown = result.get("cover_letter_markdown")
@@ -162,14 +229,33 @@ def generate_cover_letter(
         cover_letter.status = "completed"
         cover_letter.completed_at = datetime.utcnow()
         
-        db.commit()
-        db.refresh(cover_letter)
+        try:
+            db.commit()
+            db.refresh(cover_letter)
+        except Exception as db_error:
+            db.rollback()
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Database error while saving results: {str(db_error)}"
+            )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-        cover_letter.status = "failed"
-        cover_letter.error_message = str(e)
-        db.commit()
-        db.refresh(cover_letter)
+        # Handle any other errors
+        try:
+            db.rollback()
+            # Re-query the object to ensure it's attached to the session
+            cover_letter = db.query(CoverLetter).filter(CoverLetter.id == cover_letter.id).first()
+            if cover_letter:
+                cover_letter.status = "failed"
+                cover_letter.error_message = str(e)
+                db.commit()
+        except Exception as db_error:
+            # If rollback/commit fails, log but don't fail again
+            print(f"Error updating cover letter status: {db_error}")
+        
         raise HTTPException(status_code=500, detail=f"Cover letter generation failed: {str(e)}")
     
     return CoverLetterResponse(

@@ -27,7 +27,9 @@ elif database_url.startswith("postgresql"):
     engine_kwargs.update({
         "pool_pre_ping": True,  # Verify connections before using
         "pool_size": 5,  # Default connection pool size
-        "max_overflow": 10  # Max connections beyond pool_size
+        "max_overflow": 10,  # Max connections beyond pool_size
+        "pool_recycle": 3600,  # Recycle connections after 1 hour
+        "pool_reset_on_return": "commit"  # Reset connection state on return
     })
 
 # Create engine

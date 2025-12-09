@@ -694,6 +694,7 @@ class Job(Base):
     
     # Status
     status = Column(SQLEnum(JobStatus), nullable=False, default=JobStatus.DRAFT, index=True)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)  # Controls if ad is visible to candidates
     
     # Compensation
     min_salary = Column(Float, nullable=True)
@@ -741,7 +742,8 @@ class Candidate(Base):
     location = Column(String(255), nullable=True)
     years_experience = Column(Integer, nullable=True)
     current_title = Column(String(255), nullable=True)
-    resume_url = Column(String(500), nullable=True)  # Path to file in storage
+    resume_key = Column(String(500), nullable=True)  # R2 object key (e.g., "Applicants/abc123.pdf"), NOT a URL
+    resume_url = Column(String(500), nullable=True)  # DEPRECATED: Legacy field, kept for migration compatibility
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

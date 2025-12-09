@@ -16,6 +16,7 @@ import {
   Zap,
   Target,
   Star,
+  Award,
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
@@ -127,18 +128,168 @@ export default function CVRewriter() {
     }
   };
 
-  const handleDownload = () => {
-    if (result?.rewritten_cv_text) {
-      const blob = new Blob([result.rewritten_cv_text], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `rewritten-cv-${selectedStyle}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+  // Convert markdown to HTML (simplified and robust)
+  const markdownToHtml = (markdown: string): string => {
+    const escapeHtml = (text: string): string => {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+    
+    const processInline = (text: string): string => {
+      // Process bold
+      return text.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>');
+    };
+    
+    const lines = markdown.split('\n');
+    let processedLines: string[] = [];
+    let inList = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      
+      // Headers
+      if (trimmed.startsWith('### ')) {
+        if (inList) { processedLines.push('</ul>'); inList = false; }
+        const content = escapeHtml(trimmed.substring(4));
+        processedLines.push(`<h3 style="font-size: 1.5em; font-weight: bold; margin-top: 1.5em; margin-bottom: 0.5em; color: #1f2937;">${content}</h3>`);
+      } else if (trimmed.startsWith('## ')) {
+        if (inList) { processedLines.push('</ul>'); inList = false; }
+        const content = escapeHtml(trimmed.substring(3));
+        processedLines.push(`<h2 style="font-size: 2em; font-weight: bold; margin-top: 2em; margin-bottom: 1em; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5em;">${content}</h2>`);
+      } else if (trimmed.startsWith('# ')) {
+        if (inList) { processedLines.push('</ul>'); inList = false; }
+        const content = escapeHtml(trimmed.substring(2));
+        processedLines.push(`<h1 style="font-size: 2.5em; font-weight: bold; margin-top: 1em; margin-bottom: 1em; color: #111827;">${content}</h1>`);
+      } else if (trimmed === '---' || trimmed === '***') {
+        if (inList) { processedLines.push('</ul>'); inList = false; }
+        processedLines.push('<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 2em 0;">');
+      } else {
+        const listMatch = trimmed.match(/^[\-\*\+]\s+(.+)$/);
+        if (listMatch) {
+          if (!inList) {
+            processedLines.push('<ul style="margin: 1em 0; padding-left: 2em;">');
+            inList = true;
+          }
+          let content = listMatch[1];
+          content = processInline(escapeHtml(content));
+          processedLines.push(`<li style="margin-bottom: 0.5em; line-height: 1.6;">${content}</li>`);
+        } else {
+          if (inList) { processedLines.push('</ul>'); inList = false; }
+          if (trimmed) {
+            let content = processInline(escapeHtml(trimmed));
+            processedLines.push(`<p style="margin: 1em 0; line-height: 1.6;">${content}</p>`);
+          } else {
+            processedLines.push('<br>');
+          }
+        }
+      }
     }
+    
+    if (inList) processedLines.push('</ul>');
+    
+    return processedLines.join('\n');
+  };
+
+  const handleDownload = () => {
+    if (!result) return;
+    
+    const cvContent = result.rewritten_cv_markdown || result.rewritten_cv_text;
+    const styleName = styles.find(s => s.id === selectedStyle)?.name || selectedStyle;
+    
+    // Get style-specific CSS
+    const getStyleCSS = () => {
+      switch (selectedStyle) {
+        case 'modern':
+          return `
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1f2937; }
+            .container { max-width: 900px; margin: 0 auto; padding: 40px; }
+            h1 { color: #2563eb; border-bottom: 3px solid #3b82f6; padding-bottom: 10px; }
+            h2 { color: #1e40af; margin-top: 30px; }
+            strong { color: #1e40af; }
+          `;
+        case 'minimal':
+          return `
+            body { font-family: 'Georgia', serif; color: #374151; }
+            .container { max-width: 800px; margin: 0 auto; padding: 50px; }
+            h1 { color: #111827; font-weight: 300; letter-spacing: 2px; }
+            h2 { color: #4b5563; font-weight: 400; margin-top: 40px; border-bottom: 1px solid #d1d5db; padding-bottom: 5px; }
+            strong { color: #111827; font-weight: 500; }
+          `;
+        case 'executive':
+          return `
+            body { font-family: 'Times New Roman', serif; color: #1f2937; }
+            .container { max-width: 850px; margin: 0 auto; padding: 60px; }
+            h1 { color: #7c3aed; font-size: 2.8em; letter-spacing: 1px; }
+            h2 { color: #5b21b6; margin-top: 35px; font-size: 1.8em; border-left: 4px solid #8b5cf6; padding-left: 15px; }
+            strong { color: #6d28d9; }
+          `;
+        case 'ats_optimized':
+          return `
+            body { font-family: 'Arial', sans-serif; color: #1f2937; }
+            .container { max-width: 900px; margin: 0 auto; padding: 40px; }
+            h1 { color: #059669; font-size: 2.2em; }
+            h2 { color: #047857; margin-top: 30px; font-size: 1.5em; background: #ecfdf5; padding: 10px; border-left: 4px solid #10b981; }
+            strong { color: #065f46; }
+          `;
+        default:
+          return '';
+      }
+    };
+    
+    // Convert markdown to HTML
+    const htmlContent = markdownToHtml(cvContent);
+    
+    // Create full HTML document
+    const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CV - ${styleName} Style</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      ${getStyleCSS()}
+      background: #ffffff;
+      line-height: 1.6;
+    }
+    .container {
+      background: #ffffff;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      margin: 20px auto;
+    }
+    p { margin: 1em 0; line-height: 1.8; }
+    ul { margin: 1em 0; padding-left: 2em; }
+    li { margin-bottom: 0.5em; }
+    hr { margin: 2em 0; border: none; border-top: 1px solid #e5e7eb; }
+    @media print {
+      body { background: white; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    ${htmlContent}
+  </div>
+</body>
+</html>`;
+    
+    // Create and download the file
+    const blob = new Blob([fullHTML], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `CV-${styleName}-${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const currentStyle = styles.find(s => s.id === selectedStyle) || styles[0];

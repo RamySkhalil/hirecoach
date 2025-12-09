@@ -523,6 +523,153 @@ export default function CVAnalyzer() {
               )}
             </AnimatePresence>
           </div>
+
+          {/* Professional Insights Table - Full Width */}
+          {analysis && (analysis.strengths || analysis.weaknesses || analysis.suggestions) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 overflow-hidden"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
+                  <Award className="h-6 w-6 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  Professional Candidate Insights
+                </h2>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900 dark:text-gray-100 border-b-2 border-gray-200 dark:border-gray-700">
+                        Category
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900 dark:text-gray-100 border-b-2 border-gray-200 dark:border-gray-700">
+                        Insights
+                      </th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-900 dark:text-gray-100 border-b-2 border-gray-200 dark:border-gray-700 w-24">
+                        Rating
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {/* Strengths Row */}
+                    {analysis.strengths && analysis.strengths.length > 0 && (
+                      <tr className="hover:bg-green-50/50 dark:hover:bg-green-900/10 transition-colors">
+                        <td className="px-6 py-4 align-top">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-5 w-5 text-green-600" />
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">Strengths</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <ul className="space-y-2">
+                            {analysis.strengths.map((strength: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                <span>{strength}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                        <td className="px-6 py-4 text-center align-top">
+                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 border-2 border-green-300 dark:border-green-700">
+                            <span className="text-xl font-bold text-green-700 dark:text-green-400">
+                              {analysis.overall_score || 'N/A'}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Weaknesses Row */}
+                    {analysis.weaknesses && analysis.weaknesses.length > 0 && (
+                      <tr className="hover:bg-orange-50/50 dark:hover:bg-orange-900/10 transition-colors">
+                        <td className="px-6 py-4 align-top">
+                          <div className="flex items-center gap-2">
+                            <TrendingDown className="h-5 w-5 text-orange-600" />
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">Areas for Improvement</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <ul className="space-y-2">
+                            {analysis.weaknesses.map((weakness: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                                <XCircle className="h-4 w-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                                <span>{weakness}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                        <td className="px-6 py-4 text-center align-top">
+                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-300 dark:border-orange-700">
+                            <span className="text-xl font-bold text-orange-700 dark:text-orange-400">
+                              {analysis.ats_score ? (100 - analysis.ats_score) : 'N/A'}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Recommendations Row */}
+                    {analysis.suggestions && analysis.suggestions.length > 0 && (
+                      <tr className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors">
+                        <td className="px-6 py-4 align-top">
+                          <div className="flex items-center gap-2">
+                            <Lightbulb className="h-5 w-5 text-blue-600" />
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">Career Recommendations</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <ul className="space-y-2">
+                            {analysis.suggestions.map((suggestion: string, idx: number) => {
+                              // Categorize suggestions
+                              const isCert = /certif|certificate|credential|license/i.test(suggestion);
+                              const isStudy = /course|training|education|learn|study|degree|program/i.test(suggestion);
+                              const isExp = /experience|project|role|position|internship|work/i.test(suggestion);
+                              
+                              let icon = <Target className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />;
+                              let bgColor = "bg-blue-50 dark:bg-blue-900/20";
+                              
+                              if (isCert) {
+                                icon = <Award className="h-4 w-4 text-purple-600 flex-shrink-0 mt-0.5" />;
+                                bgColor = "bg-purple-50 dark:bg-purple-900/20";
+                              } else if (isStudy) {
+                                icon = <FileText className="h-4 w-4 text-indigo-600 flex-shrink-0 mt-0.5" />;
+                                bgColor = "bg-indigo-50 dark:bg-indigo-900/20";
+                              } else if (isExp) {
+                                icon = <TrendingUp className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />;
+                                bgColor = "bg-emerald-50 dark:bg-emerald-900/20";
+                              }
+                              
+                              return (
+                                <li key={idx} className={`flex items-start gap-2 p-2 rounded-lg ${bgColor}`}>
+                                  {icon}
+                                  <span className="text-gray-700 dark:text-gray-300 text-sm">{suggestion}</span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </td>
+                        <td className="px-6 py-4 text-center align-top">
+                          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700">
+                            <span className="text-xl font-bold text-blue-700 dark:text-blue-400">
+                              {analysis.suggestions.length}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Tips</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </div>
     </main>

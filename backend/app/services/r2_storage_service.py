@@ -88,7 +88,7 @@ class R2StorageService:
             content_type: MIME type (auto-detected if not provided)
         
         Returns:
-            Public URL of uploaded file
+            Object key (e.g., "Applicants/abc123.pdf") - NOT a full URL
         """
         # Generate unique filename to avoid collisions
         file_ext = Path(filename).suffix.lower()
@@ -119,13 +119,8 @@ class R2StorageService:
                 }
             )
             
-            # Return public URL
-            if self.public_url:
-                # Custom domain
-                return f"{self.public_url.rstrip('/')}/{object_key}"
-            else:
-                # R2 public URL (requires public bucket or signed URL)
-                return f"https://{self.bucket_name}.r2.cloudflarestorage.com/{object_key}"
+            # Return object key only (not a URL)
+            return object_key
         
         except ClientError as e:
             raise Exception(f"Failed to upload file to R2: {str(e)}")
@@ -151,8 +146,33 @@ class R2StorageService:
         except ClientError:
             return False
     
+    def generate_presigned_cv_url(self, object_key: str, expires_in_seconds: int = 600) -> str:
+        """
+        Generate a short-lived presigned URL for CV access.
+        
+        Args:
+            object_key: Object key (e.g., "Applicants/abc123.pdf")
+            expires_in_seconds: URL expiration time in seconds (default: 10 minutes)
+        
+        Returns:
+            Presigned URL for accessing the file
+        
+        Raises:
+            Exception: If URL generation fails
+        """
+        try:
+            url = self.s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': self.bucket_name, 'Key': object_key},
+                ExpiresIn=expires_in_seconds
+            )
+            return url
+        except ClientError as e:
+            raise Exception(f"Failed to generate presigned URL: {str(e)}")
+    
     def get_file_url(self, object_key: str, expires_in: int = 3600) -> str:
         """
+        DEPRECATED: Use generate_presigned_cv_url instead.
         Generate a signed URL for private file access.
         
         Args:
@@ -162,15 +182,7 @@ class R2StorageService:
         Returns:
             Signed URL
         """
-        try:
-            url = self.s3_client.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': self.bucket_name, 'Key': object_key},
-                ExpiresIn=expires_in
-            )
-            return url
-        except ClientError as e:
-            raise Exception(f"Failed to generate signed URL: {str(e)}")
+        return self.generate_presigned_cv_url(object_key, expires_in)
 
 
 # Singleton instance

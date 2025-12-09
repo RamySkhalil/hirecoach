@@ -13,8 +13,10 @@ import {
   ColumnFiltersState,
   VisibilityState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronRight, ArrowLeftRight, Search, Download, ChevronLeft, ChevronsLeft, ChevronsRight, FileText, MapPin, ExternalLink } from "lucide-react";
+import { ArrowUpDown, ChevronRight, ArrowLeftRight, Search, Download, ChevronLeft, ChevronsLeft, ChevronsRight, FileText, MapPin, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
+import { openCv } from "@/lib/cv";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +56,9 @@ export function ApplicationsTable({ data, jobId }: ApplicationsTableProps) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [isExporting, setIsExporting] = React.useState(false);
+  const [loadingCvId, setLoadingCvId] = React.useState<string | null>(null);
+  const [cvError, setCvError] = React.useState<string | null>(null);
+  const { getToken } = useAuth();
 
   const columns: ColumnDef<Application>[] = [
     {
@@ -123,26 +128,51 @@ export function ApplicationsTable({ data, jobId }: ApplicationsTableProps) {
       },
     },
     {
-      accessorKey: "resume_url",
+      id: "cv",
       header: "CV",
       cell: ({ row }) => {
-        const resumeUrl = row.getValue("resume_url") as string | null;
-        if (!resumeUrl) {
-          return <span className="text-muted-foreground">—</span>;
-        }
+        const application = row.original;
+        const isLoading = loadingCvId === application.id;
+        
+        const handleViewCv = async (e: React.MouseEvent) => {
+          e.stopPropagation();
+          setCvError(null);
+          setLoadingCvId(application.id);
+          
+          try {
+            await openCv(application.id, getToken);
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to open CV";
+            setCvError(errorMessage);
+            // Show error toast or alert
+            setTimeout(() => setCvError(null), 5000);
+          } finally {
+            setLoadingCvId(null);
+          }
+        };
+        
         return (
           <div className="flex items-center gap-2">
-            <a
-              href={resumeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-primary hover:underline"
-              onClick={(e) => e.stopPropagation()}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleViewCv}
+              disabled={isLoading}
+              className="h-8 px-2 text-primary hover:text-primary"
             >
-              <FileText className="h-4 w-4" />
-              <span className="text-sm">View CV</span>
-              <ExternalLink className="h-3 w-3" />
-            </a>
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Loading...</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4" />
+                  <span className="text-sm">View CV</span>
+                  <ExternalLink className="h-3 w-3" />
+                </>
+              )}
+            </Button>
           </div>
         );
       },
@@ -412,6 +442,12 @@ export function ApplicationsTable({ data, jobId }: ApplicationsTableProps) {
 
   return (
     <div className="w-full space-y-4">
+      {/* Error Display */}
+      {cvError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-600 dark:text-red-400">
+          {cvError}
+        </div>
+      )}
       {/* Filters and Search */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-1 items-center gap-2">
