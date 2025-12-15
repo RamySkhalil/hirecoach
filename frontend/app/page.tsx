@@ -6,6 +6,7 @@ import {
   Sparkles, Target, Award, TrendingUp, ArrowRight, CheckCircle2,
   Mic, Brain, MessageSquare, BarChart3, Clock, Shield, FileText, Zap, Wand2, Bot, Briefcase
 } from "lucide-react";
+import LindaChat from "@/components/LindaChat";
 
 export default function Home() {
   return (
@@ -71,7 +72,7 @@ export default function Home() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/onboarding/role">
+              <Link href="/interview/setup">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -714,6 +715,9 @@ export default function Home() {
           animation-delay: 4s;
         }
       `}</style>
+
+      {/* Linda Chat Support */}
+      <LindaChat />
     </main>
   );
 }

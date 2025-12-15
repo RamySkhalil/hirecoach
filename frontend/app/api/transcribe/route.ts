@@ -1,5 +1,17 @@
 // app/api/transcribe/route.ts
+
+// NOTE:
+// This route is protected by Arcjet via middleware.ts
+// - Global shield + bot protection applies to all routes
+// - This route is NOT under /api/interviews/* so it does not have interview-specific rate limiting
+// - It is used for voice transcription which may be used in interview contexts
+// IMPORTANT: Do not change transcription logic here without considering Arcjet quotas and costs.
+
 import { NextRequest, NextResponse } from "next/server";
+
+// WARNING:
+// This route currently does not enforce auth here.
+// Security, rate limiting, and abuse protection are handled via middleware.ts (Arcjet) and any outer auth layers.
 
 export async function POST(req: NextRequest) {
   try {

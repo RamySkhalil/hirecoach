@@ -242,6 +242,21 @@ pytest
 - [ ] Video recording and analysis
 - [ ] Advanced analytics and insights
 
+## Security / Architecture Note
+
+- The FastAPI backend is intended as an **internal service**.
+- All public user traffic should go through the Next.js frontend, which:
+  - Handles UI, auth (Clerk), and Arcjet protection (WAF + rate limiting).
+- In production:
+  - FastAPI should not be directly exposed to the public internet.
+  - Prefer a private network / VPC and a reverse proxy that only accepts traffic from the frontend.
+- CORS:
+  - By default, CORS behavior matches the current implementation (allows all origins).
+  - You can enable a stricter mode by setting:
+    - `STRICT_BACKEND_CORS=1`
+    - `FRONTEND_ORIGIN=https://your-frontend-domain.com`
+  - These environment variables are optional and default to permissive behavior to avoid breaking existing setups.
+
 ## License
 
 Proprietary - All rights reserved

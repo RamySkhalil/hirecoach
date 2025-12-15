@@ -1,6 +1,7 @@
 """
 FastAPI application entry point for Interviewly backend.
 """
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
@@ -8,7 +9,13 @@ from datetime import datetime
 from app.config import settings
 from app.db import init_db
 from app.schemas import HealthCheckResponse
-from app.routes import interview, media, cv, cv_rewriter, livekit_routes, conversational_interview, career_agent, health, pricing, admin, auth, ats
+from app.routes import interview, media, cv, cv_rewriter, livekit_routes, conversational_interview, career_agent, health, pricing, admin, auth, ats, support
+
+# NOTE:
+# This FastAPI app is intended to be an INTERNAL backend service.
+# - The public entrypoint for users is the Next.js app (with Arcjet + Clerk).
+# - FastAPI should NOT be directly exposed to the public internet in production.
+# - In production, access should come only from trusted frontends / internal networks.
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -19,9 +26,24 @@ app = FastAPI(
 )
 
 # Configure CORS
+# Existing / current behavior (fallback) - matches current implementation
+default_allow_origins = ["*"]  # Current behavior: allow all origins
+
+# Optional strict CORS mode:
+# - When STRICT_BACKEND_CORS=1, restrict to FRONTEND_ORIGIN only.
+# - By default, STRICT_BACKEND_CORS is OFF to avoid breaking anything.
+# - This is a future hardening option; current behavior remains unchanged.
+strict_mode = os.getenv("STRICT_BACKEND_CORS", "0") == "1"
+frontend_origin = os.getenv("FRONTEND_ORIGIN")
+
+if strict_mode and frontend_origin:
+    allow_origins = [frontend_origin]
+else:
+    allow_origins = default_allow_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this to specific origins
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -39,6 +61,7 @@ app.include_router(media.router)
 app.include_router(cv.router)
 app.include_router(cv_rewriter.router)
 app.include_router(career_agent.router)  # AI Career Agent
+app.include_router(support.router)  # Linda Support Chat
 app.include_router(livekit_routes.router)
 
 

@@ -458,6 +458,34 @@ class UserMessageEmbedding(Base):
         return f"<UserMessageEmbedding(id={self.id}, user_id={self.user_id}, role={self.message_role})>"
 
 
+class SupportChatMessage(Base):
+    """
+    Stores support chat messages from Linda assistant.
+    Records conversations for registered users to maintain memory.
+    """
+    __tablename__ = "support_chat_messages"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)  # Nullable for anonymous users
+    clerk_user_id = Column(String(255), nullable=True, index=True)  # Clerk user ID for quick lookup
+    
+    # Message content
+    role = Column(String(20), nullable=False)  # 'user' or 'assistant'
+    content = Column(Text, nullable=False)
+    
+    # Conversation grouping
+    conversation_id = Column(String(36), nullable=True, index=True)  # Groups messages in a conversation session
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    # Relationships
+    user = relationship("User")
+    
+    def __repr__(self):
+        return f"<SupportChatMessage(id={self.id}, user_id={self.user_id}, role={self.role})>"
+
+
 # ========================================
 # PRICING & USAGE TRACKING MODELS
 # ========================================

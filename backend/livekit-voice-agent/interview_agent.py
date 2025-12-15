@@ -80,7 +80,7 @@ class InterviewCoachAgent(Agent):
         if job_title:
             role_context = f"\n\nInterview Context:\n- Position: {job_title}\n- Level: {seniority or 'mid'}-level\n- Total questions to ask: {num_questions}"
         
-                instructions = f"""You are an AI Interview Coach.
+            instructions = f"""You are an AI Interview Coach.
 
 Goal: Conduct a professional mock interview for the role of **{job_title}** at **{seniority}-level**, asking exactly **{num_questions} questions** in total (including any follow-ups).
 
@@ -95,8 +95,7 @@ Goal: Conduct a professional mock interview for the role of **{job_title}** at *
 
 🔚 Closing Line
 End with:  
-“Thank you for completing this interview. We’ve covered all {num_questions} questions. You’ll receive a detailed report shortly.”
-"""
+Thank you for completing this interview. We have covered all {num_questions} questions. You’ll receive a detailed report shortly."""
 
 #         instructions = f"""You are an expert AI Interview Coach conducting a professional mock interview.
 # {role_context}
@@ -217,7 +216,7 @@ async def interview_agent_handler(ctx: agents.JobContext):
     session = AgentSession(
         stt="assemblyai/universal-streaming:en",  # same as working agent
         # llm="openai/gpt-4o",                      # keep your model
-        llm="openai/gpt-5-nano"
+        llm="openai/gpt-5-nano",
         tts="cartesia/sonic-3:9626c31c-bec5-4cca-baa8-f8ba9e84c8bc",  # same Cartesia voice as working agent
         vad=silero.VAD.load(),
         turn_detection=MultilingualModel(),

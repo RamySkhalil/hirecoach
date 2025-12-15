@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { Briefcase, User, ArrowRight } from "lucide-react";
@@ -10,6 +10,8 @@ import { setUserRole } from "@/lib/auth";
 
 export default function RoleOnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const switchTo = searchParams.get("switchTo");
   const { isSignedIn, getToken, isLoaded: authLoaded } = useAuth();
   const { user, role, loading } = useCurrentUser();
   const [selecting, setSelecting] = useState(false);
@@ -22,15 +24,16 @@ export default function RoleOnboardingPage() {
       return;
     }
 
-    // If user has a role, redirect (but only if we're sure)
-    if (!loading && role) {
+    // If user has a role and no switchTo parameter, redirect (but only if we're sure)
+    // Allow role switching if switchTo parameter is present
+    if (!loading && role && !switchTo) {
       if (role === "RECRUITER") {
         router.push("/recruiter/dashboard");
       } else if (role === "CANDIDATE") {
         router.push("/interview/setup");
       }
     }
-  }, [loading, isSignedIn, role, router]);
+  }, [loading, isSignedIn, role, router, switchTo]);
 
   const handleRoleSelect = async (selectedRole: "RECRUITER" | "CANDIDATE") => {
     if (selecting) return;
@@ -91,8 +94,9 @@ export default function RoleOnboardingPage() {
     );
   }
 
-  if (role) {
+  if (role && !switchTo) {
     // Will redirect in useEffect, but show loading while redirecting
+    // Only redirect if no switchTo parameter (which allows role change)
     return (
       <main className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
@@ -113,10 +117,12 @@ export default function RoleOnboardingPage() {
           className="text-center mb-12"
         >
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-            Welcome to Interviewly
+            {switchTo ? "Switch Your Role" : "Welcome to Interviewly"}
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400">
-            Choose your role to get started
+            {switchTo 
+              ? "You can switch between candidate and recruiter roles anytime"
+              : "Choose your role to get started"}
           </p>
         </motion.div>
 

@@ -1,17 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { Sparkles, Briefcase, Trophy, Globe, Hash, ArrowRight, Loader2 } from "lucide-react";
 import { startInterview, type InterviewStartRequest } from "@/lib/api";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function InterviewSetup() {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
+  const { user, role, loading: userLoading } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Redirect to onboarding if not signed in or if user needs to set/change role
+  useEffect(() => {
+    if (!userLoading) {
+      if (!isSignedIn) {
+        router.push("/sign-in");
+        return;
+      }
+      // If user has recruiter role, redirect to onboarding to allow role change
+      if (role === "RECRUITER") {
+        router.push("/onboarding/role?switchTo=candidate");
+        return;
+      }
+      // If user has no role, redirect to onboarding to select one
+      if (role === null && user) {
+        router.push("/onboarding/role");
+        return;
+      }
+    }
+  }, [userLoading, isSignedIn, role, user, router]);
 
   const [formData, setFormData] = useState<InterviewStartRequest>({
     job_title: "",
@@ -27,6 +49,10 @@ export default function InterviewSetup() {
 
     try {
       const token = await getToken();
+      if (!token) {
+        router.push("/sign-in");
+        return;
+      }
       const response = await startInterview(formData, token);
       router.push(`/interview/session/${response.session_id}`);
     } catch (err: any) {
@@ -34,6 +60,18 @@ export default function InterviewSetup() {
       setLoading(false);
     }
   };
+
+  // Show loading while checking auth/role
+  if (userLoading || !isSignedIn || role === "RECRUITER" || (role === null && user)) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-950 dark:to-indigo-950 pt-20 transition-colors duration-300">
