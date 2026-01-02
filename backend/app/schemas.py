@@ -2,7 +2,7 @@
 Pydantic schemas for request/response validation.
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 
@@ -16,6 +16,7 @@ class InterviewStartRequest(BaseModel):
     seniority: str = Field(..., pattern="^(junior|mid|senior)$", description="Seniority level")
     language: str = Field(default="en", pattern="^(en|ar)$", description="Interview language")
     num_questions: int = Field(..., ge=1, le=20, description="Number of questions (1-20)")
+    program_metadata: Optional[Dict[str, Any]] = Field(None, description="Optional metadata for program-launched interviews")
 
 
 class QuestionResponse(BaseModel):

@@ -23,12 +23,18 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
+    # Dummy class for type hints when OpenAI is not available
+    class OpenAI:
+        pass
 
 try:
     from anthropic import Anthropic
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
+    # Dummy class for type hints when Anthropic is not available
+    class Anthropic:
+        pass
 
 
 class LLMService:

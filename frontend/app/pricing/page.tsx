@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  Check, X, Sparkles, Zap, Crown, Gift, ArrowRight
+  Check, X, Sparkles, Zap, Crown, Gift, ArrowRight, Briefcase
 } from "lucide-react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface PlanPrice {
   billing_period: string;
@@ -51,6 +53,9 @@ const FEATURE_NAMES: Record<string, string> = {
 
 export default function PricingPage() {
   const { user, isSignedIn } = useUser();
+  const { role } = useCurrentUser();
+  const searchParams = useSearchParams();
+  const upgrade = searchParams.get('upgrade');
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [currentPlan, setCurrentPlan] = useState<CurrentPlan | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
@@ -219,12 +224,29 @@ export default function PricingPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Choose Your Plan
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Invest in your career with AI-powered tools that actually work
-          </p>
+          {upgrade === 'recruiter' && role === 'CANDIDATE' ? (
+            <>
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/30 dark:to-green-900/30 text-emerald-700 dark:text-emerald-300 px-4 py-2 rounded-full text-sm font-medium mb-4 border border-emerald-200 dark:border-emerald-700">
+                <Briefcase className="h-4 w-4" />
+                Upgrade to Recruiter Account
+              </div>
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 bg-clip-text text-transparent">
+                Unlock Recruiter Tools
+              </h1>
+              <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                Access powerful ATS features, candidate screening tools, and advanced analytics to find the perfect talent.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Choose Your Plan
+              </h1>
+              <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                Invest in your career with AI-powered tools that actually work
+              </p>
+            </>
+          )}
         </motion.div>
 
         {/* Billing Toggle */}

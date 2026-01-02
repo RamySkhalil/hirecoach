@@ -9,7 +9,7 @@ from datetime import datetime
 from app.config import settings
 from app.db import init_db
 from app.schemas import HealthCheckResponse
-from app.routes import interview, media, cv, cv_rewriter, livekit_routes, conversational_interview, career_agent, health, pricing, admin, auth, ats, support
+from app.routes import interview, media, cv, cv_rewriter, livekit_routes, conversational_interview, career_agent, health, pricing, admin, auth, ats, support, programs
 
 # NOTE:
 # This FastAPI app is intended to be an INTERNAL backend service.
@@ -62,6 +62,7 @@ app.include_router(cv.router)
 app.include_router(cv_rewriter.router)
 app.include_router(career_agent.router)  # AI Career Agent
 app.include_router(support.router)  # Linda Support Chat
+app.include_router(programs.router)  # 30-Day Programs
 app.include_router(livekit_routes.router)
 
 

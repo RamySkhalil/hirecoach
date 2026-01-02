@@ -43,7 +43,8 @@ def start_interview(
         seniority=request.seniority,
         language=request.language,
         num_questions=request.num_questions,
-        status="active"
+        status="active",
+        program_metadata=request.program_metadata
     )
     db.add(session)
     db.commit()

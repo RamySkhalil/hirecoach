@@ -39,7 +39,7 @@ export default function InterviewReport() {
         
         // Try new report endpoint first
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/interview/session/${sessionId}/report`,
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"}/interview/session/${sessionId}/report`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : {}
           }

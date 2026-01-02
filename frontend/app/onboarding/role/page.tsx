@@ -51,9 +51,14 @@ export default function RoleOnboardingPage() {
       // Small delay to ensure state updates
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Redirect based on role
+      // Redirect based on role and upgrade context
       if (selectedRole === "RECRUITER") {
-        router.push("/recruiter/dashboard");
+        // If upgrading from candidate to recruiter, show pricing first
+        if (switchTo === 'recruiter' || (role === 'CANDIDATE' && selectedRole === 'RECRUITER')) {
+          router.push("/pricing?upgrade=recruiter");
+        } else {
+          router.push("/recruiter/dashboard");
+        }
       } else {
         router.push("/interview/setup");
       }
@@ -117,10 +122,13 @@ export default function RoleOnboardingPage() {
           className="text-center mb-12"
         >
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-            {switchTo ? "Switch Your Role" : "Welcome to Interviewly"}
+            {switchTo === 'recruiter' ? "Upgrade to Recruiter" : 
+             switchTo ? "Switch Your Role" : "Welcome to Interviewly"}
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400">
-            {switchTo 
+            {switchTo === 'recruiter' 
+              ? "Access powerful recruiting tools and candidate management features"
+              : switchTo 
               ? "You can switch between candidate and recruiter roles anytime"
               : "Choose your role to get started"}
           </p>
@@ -132,15 +140,22 @@ export default function RoleOnboardingPage() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all duration-300 cursor-pointer group"
+            className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 hover:shadow-2xl transition-all duration-300 cursor-pointer group ${
+              switchTo === 'recruiter' ? 'ring-2 ring-emerald-400 dark:ring-emerald-500' : ''
+            }`}
             onClick={() => handleRoleSelect("RECRUITER")}
           >
             <div className="flex flex-col items-center text-center">
+              {switchTo === 'recruiter' && (
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-emerald-500 to-green-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                  ⭐ Upgrade
+                </div>
+              )}
               <div className="inline-flex p-6 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Briefcase className="h-12 w-12 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-                I'm a Recruiter
+                {switchTo === 'recruiter' ? 'Upgrade to Recruiter' : "I'm a Recruiter"}
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
                 Post jobs, screen candidates, and conduct AI-powered interviews with our ATS platform.

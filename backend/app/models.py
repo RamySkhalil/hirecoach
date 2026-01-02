@@ -64,6 +64,9 @@ class InterviewSession(Base):
     summary_json = Column(JSON, nullable=True)  # Stores full summary report
     transcript_json = Column(JSON, nullable=True)  # Stores voice interview transcript
     
+    # Program integration (optional)
+    program_metadata = Column(JSON, nullable=True)  # {program_id, day_number, task_id, enrollment_id}
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     completed_at = Column(DateTime, nullable=True)
@@ -938,4 +941,182 @@ class InterviewFeedback(Base):
     
     # Relationships
     interview = relationship("Interview", back_populates="feedback")
+
+
+# ========================================
+# 30-DAY PROGRAMS MODELS
+# ========================================
+
+class ProgramDifficulty(str, enum.Enum):
+    """Program difficulty levels."""
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+
+
+class ProgramEnrollmentStatus(str, enum.Enum):
+    """Program enrollment status."""
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    ABANDONED = "abandoned"
+
+
+class ProgramTaskType(str, enum.Enum):
+    """Program task types."""
+    READ = "read"
+    PRACTICE = "practice"
+    MOCK_INTERVIEW = "mock_interview"
+    REFLECTION = "reflection"
+
+
+class Program(Base):
+    """
+    30-day structured preparation programs.
+    """
+    __tablename__ = "programs"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    slug = Column(String(255), unique=True, nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    target_role = Column(String(255), nullable=False)  # e.g., "Software Engineer"
+    difficulty = Column(SQLEnum(ProgramDifficulty), nullable=False)
+    is_published = Column(Boolean, default=False, nullable=False, index=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    days = relationship("ProgramDay", back_populates="program", cascade="all, delete-orphan")
+    enrollments = relationship("ProgramEnrollment", back_populates="program", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<Program(id={self.id}, slug={self.slug}, title={self.title})>"
+
+
+class ProgramDay(Base):
+    """
+    Individual days within a 30-day program.
+    """
+    __tablename__ = "program_days"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    program_id = Column(String(36), ForeignKey("programs.id", ondelete="CASCADE"), nullable=False, index=True)
+    day_number = Column(Integer, nullable=False)  # 1-30
+    title = Column(String(255), nullable=False)  # e.g., "Behavioral – STAR practice"
+    focus_competencies = Column(JSON, nullable=True)  # array of competency codes
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    program = relationship("Program", back_populates="days")
+    tasks = relationship("ProgramDayTask", back_populates="program_day", cascade="all, delete-orphan")
+    
+    # Unique constraint
+    __table_args__ = (
+        {"extend_existing": True},
+    )
+    
+    def __repr__(self):
+        return f"<ProgramDay(id={self.id}, program_id={self.program_id}, day_number={self.day_number})>"
+
+
+class ProgramDayTask(Base):
+    """
+    Individual tasks within a program day.
+    """
+    __tablename__ = "program_day_tasks"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    program_day_id = Column(String(36), ForeignKey("program_days.id", ondelete="CASCADE"), nullable=False, index=True)
+    task_type = Column(SQLEnum(ProgramTaskType), nullable=False)
+    title = Column(String(255), nullable=False)
+    details = Column(Text, nullable=True)
+    meta = Column(JSON, nullable=True)  # for mock_interview: {templateId, durationMin, questionStyle}
+    sort_order = Column(Integer, nullable=False, default=0)
+    
+    # Relationships
+    program_day = relationship("ProgramDay", back_populates="tasks")
+    progress = relationship("ProgramTaskProgress", back_populates="task", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<ProgramDayTask(id={self.id}, task_type={self.task_type}, title={self.title})>"
+
+
+class ProgramEnrollment(Base):
+    """
+    User enrollments in 30-day programs.
+    """
+    __tablename__ = "program_enrollments"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)  # Clerk user id
+    program_id = Column(String(36), ForeignKey("programs.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(SQLEnum(ProgramEnrollmentStatus), default=ProgramEnrollmentStatus.ACTIVE, nullable=False)
+    
+    # Timestamps
+    enrolled_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    user = relationship("User")
+    program = relationship("Program", back_populates="enrollments")
+    task_progress = relationship("ProgramTaskProgress", back_populates="enrollment", cascade="all, delete-orphan")
+    day_completions = relationship("ProgramDayCompletion", back_populates="enrollment", cascade="all, delete-orphan")
+    
+    # Unique constraint
+    __table_args__ = (
+        {"extend_existing": True},
+    )
+    
+    def __repr__(self):
+        return f"<ProgramEnrollment(id={self.id}, user_id={self.user_id}, program_id={self.program_id})>"
+
+
+class ProgramTaskProgress(Base):
+    """
+    Progress tracking for individual tasks within program enrollments.
+    """
+    __tablename__ = "program_task_progress"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    enrollment_id = Column(String(36), ForeignKey("program_enrollments.id", ondelete="CASCADE"), nullable=False, index=True)
+    program_day_task_id = Column(String(36), ForeignKey("program_day_tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    is_done = Column(Boolean, default=False, nullable=False)
+    done_at = Column(DateTime, nullable=True)
+    
+    # Relationships
+    enrollment = relationship("ProgramEnrollment", back_populates="task_progress")
+    task = relationship("ProgramDayTask", back_populates="progress")
+    
+    # Unique constraint
+    __table_args__ = (
+        {"extend_existing": True},
+    )
+    
+    def __repr__(self):
+        return f"<ProgramTaskProgress(id={self.id}, enrollment_id={self.enrollment_id}, is_done={self.is_done})>"
+
+
+class ProgramDayCompletion(Base):
+    """
+    Day completion tracking for program enrollments.
+    """
+    __tablename__ = "program_day_completion"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    enrollment_id = Column(String(36), ForeignKey("program_enrollments.id", ondelete="CASCADE"), nullable=False, index=True)
+    day_number = Column(Integer, nullable=False)  # 1-30
+    completed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    enrollment = relationship("ProgramEnrollment", back_populates="day_completions")
+    
+    # Unique constraint
+    __table_args__ = (
+        {"extend_existing": True},
+    )
+    
+    def __repr__(self):
+        return f"<ProgramDayCompletion(id={self.id}, enrollment_id={self.enrollment_id}, day_number={self.day_number})>"
 

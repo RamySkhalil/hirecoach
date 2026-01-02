@@ -108,7 +108,7 @@ export default function InterviewSession() {
         const participantName = user?.fullName || user?.firstName || "Candidate";
         
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/livekit/token`,
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"}/livekit/token`,
           {
             method: "POST",
             headers: {

@@ -8,7 +8,7 @@ import { Briefcase, Users, Calendar, Plus, ArrowRight, Search, Filter, Power } f
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuth } from "@clerk/nextjs";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
 interface Job {
   id: string;

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { 
   Sparkles, Target, Award, TrendingUp, ArrowRight, CheckCircle2,
-  Mic, Brain, MessageSquare, BarChart3, Clock, Shield, FileText, Zap, Wand2, Bot, Briefcase
+  Mic, Brain, MessageSquare, BarChart3, Clock, Shield, FileText, Zap, Wand2, Bot, Briefcase, Calendar
 } from "lucide-react";
 import LindaChat from "@/components/LindaChat";
 
@@ -302,6 +302,67 @@ export default function Home() {
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     Job Strategy
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* 30-Day Programs - Feature 5 */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.5 }}
+              className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border-2 border-indigo-100 p-8 group hover:-translate-y-2"
+            >
+              <div className="inline-flex p-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Calendar className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                30-Day Structured Programs
+              </h3>
+              <p className="text-gray-600 leading-relaxed mb-6">
+                Role-based preparation plans with daily tasks, progress tracking, and personalized coaching.
+              </p>
+              <div className="flex gap-2 mb-6">
+                <Link href="/programs">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex-1 bg-white hover:bg-gray-50 text-indigo-600 px-4 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 border-2 border-indigo-200"
+                  >
+                    View Programs
+                    <ArrowRight className="h-4 w-4" />
+                  </motion.button>
+                </Link>
+                <Link href="/app/programs">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2"
+                  >
+                    Start 30-Day Plan
+                    <ArrowRight className="h-4 w-4" />
+                  </motion.button>
+                </Link>
+              </div>
+              <div className="mt-6 pt-6 border-t border-indigo-200">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                    Daily Interview Drills
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                    Role-based Plan
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                    Progress Tracking
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                    Expert Guidance
                   </div>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { Sparkles, Briefcase, Trophy, Globe, Hash, ArrowRight, Loader2 } from "lucide-react";
@@ -10,10 +10,18 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function InterviewSetup() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { getToken, isSignedIn } = useAuth();
   const { user, role, loading: userLoading } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Program metadata for mock interviews launched from programs
+  const [programMetadata, setProgramMetadata] = useState<{
+    program_id?: string;
+    task_id?: string;
+    day_number?: string;
+  } | null>(null);
 
   // Redirect to onboarding if not signed in or if user needs to set/change role
   useEffect(() => {
@@ -42,6 +50,25 @@ export default function InterviewSetup() {
     num_questions: 5,
   });
 
+  // Initialize from URL parameters (for program-launched interviews)
+  useEffect(() => {
+    const questions = searchParams.get('questions');
+    const program_id = searchParams.get('program_id');
+    const task_id = searchParams.get('task_id');
+    const day_number = searchParams.get('day_number');
+    
+    if (program_id) {
+      setProgramMetadata({ program_id, task_id, day_number });
+    }
+    
+    if (questions) {
+      const numQuestions = parseInt(questions);
+      if (!isNaN(numQuestions) && numQuestions >= 1 && numQuestions <= 10) {
+        setFormData(prev => ({ ...prev, num_questions: numQuestions }));
+      }
+    }
+  }, [searchParams]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -53,7 +80,13 @@ export default function InterviewSetup() {
         router.push("/sign-in");
         return;
       }
-      const response = await startInterview(formData, token);
+      // Include program metadata if available
+      const requestData = {
+        ...formData,
+        ...(programMetadata && { program_metadata: programMetadata })
+      };
+      
+      const response = await startInterview(requestData, token);
       router.push(`/interview/session/${response.session_id}`);
     } catch (err: any) {
       setError(err.message || "Failed to start interview. Please try again.");

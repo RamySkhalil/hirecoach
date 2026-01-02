@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Crown } from "lucide-react";
+import { Sparkles, Crown, User, Briefcase, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   SignInButton,
   SignUpButton,
@@ -22,6 +23,7 @@ interface CurrentPlan {
 
 export default function Navbar() {
   const { user, isSignedIn } = useUser();
+  const { role, loading: roleLoading } = useCurrentUser();
   const [currentPlan, setCurrentPlan] = useState<CurrentPlan | null>(null);
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function Navbar() {
     if (!user?.id) return;
     
     // Default to localhost if env var not set
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
     
     try {
       const response = await fetch(
@@ -110,6 +112,12 @@ export default function Navbar() {
               >
                 Career Coach
               </Link>
+              <Link
+                href="/app/programs"
+                className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors hidden lg:block"
+              >
+                Programs
+              </Link>
               
               {/* Primary CTA */}
               <Link
@@ -121,6 +129,19 @@ export default function Navbar() {
               
               {/* User Plan Badge & Profile */}
               <div className="flex items-center gap-3">
+                {/* Role Badge */}
+                {!roleLoading && role && (
+                  <div className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 ${
+                    role === 'RECRUITER'
+                      ? 'bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/30 dark:to-green-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'
+                      : 'bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700'
+                  }`}>
+                    {role === 'RECRUITER' ? <Briefcase className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                    {role === 'RECRUITER' ? 'Recruiter' : 'Candidate'}
+                  </div>
+                )}
+
+                {/* Plan Badge */}
                 {currentPlan && (
                   <Link href="/pricing" className="hidden md:block">
                     <div className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all hover:scale-105 cursor-pointer ${
@@ -148,6 +169,31 @@ export default function Navbar() {
                   }}
                 >
                   <UserButton.MenuItems>
+                    {/* Role-specific menu items */}
+                    {!roleLoading && role === 'CANDIDATE' && (
+                      <UserButton.Link
+                        label="Upgrade to Recruiter"
+                        labelIcon={<Briefcase className="h-4 w-4" />}
+                        href="/pricing?upgrade=recruiter"
+                      />
+                    )}
+                    
+                    {!roleLoading && role === 'RECRUITER' && (
+                      <UserButton.Link
+                        label="Switch to Candidate"
+                        labelIcon={<User className="h-4 w-4" />}
+                        href="/onboarding/role?switchTo=candidate"
+                      />
+                    )}
+                    
+                    {!roleLoading && role && (
+                      <UserButton.Link
+                        label="Change Role"
+                        labelIcon={<RefreshCw className="h-4 w-4" />}
+                        href="/onboarding/role?switchTo=change"
+                      />
+                    )}
+                    
                     <UserButton.Link
                       label="Pricing Plans"
                       labelIcon={<Crown className="h-4 w-4" />}
